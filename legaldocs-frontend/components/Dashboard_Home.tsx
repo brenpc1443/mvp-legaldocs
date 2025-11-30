@@ -270,7 +270,7 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                       color: "var(--color-navy)",
                     }}
                   >
-                    Dr. Carlos Mendoza
+                    Dr. Brayan Paredes
                   </p>
                   <p
                     style={{
