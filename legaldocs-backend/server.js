@@ -1,4 +1,4 @@
-// LegalDocs Backend - Express.js con Gemini API
+// LegalDocs Backend - Express.js con Gemini API + Puppeteer
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -6,8 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Document, Packer, Paragraph, TextRun } from "docx";
-import PDFDocument from "pdfkit";
+import puppeteer from "puppeteer";
+import mammoth from "mammoth";
 
 // Load environment variables
 dotenv.config();
@@ -21,11 +21,9 @@ const PORT = process.env.PORT || 5000;
 // Validate API Key
 if (!process.env.GEMINI_API_KEY) {
   console.error("❌ ERROR: GEMINI_API_KEY no configurada en .env");
-  console.error("Ve a https://ai.google.dev/ y obtén tu API key");
   process.exit(1);
 }
 
-// Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Middleware
@@ -103,6 +101,127 @@ const templates = [
   },
 ];
 
+// Clean Markdown
+function cleanMarkdown(text) {
+  const lines = text.split("\n");
+  let cleanLines = [];
+  let skipUntilMarked = false;
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+
+    if (
+      trimmed.match(/^(Como abogado|De acuerdo|Este documento)/i) &&
+      !trimmed.match(/^(CONSTE|CLÁUSULA|CONSIDERANDOS)/i)
+    ) {
+      skipUntilMarked = true;
+      return;
+    }
+
+    if (trimmed.match(/^(CONSTE|###|RECITALES|CLÁUSULA)/i)) {
+      skipUntilMarked = false;
+    }
+
+    if (!skipUntilMarked) {
+      cleanLines.push(line);
+    }
+  });
+
+  let cleaned = cleanLines.join("\n");
+  cleaned = cleaned.replace(/^-+$/gm, "");
+  cleaned = cleaned.replace(/^### /gm, "");
+  cleaned = cleaned.replace(/^## /gm, "");
+  cleaned = cleaned.replace(/^# /gm, "");
+  cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, "$1");
+  cleaned = cleaned.replace(/\[\*[^\*]*\*\]/g, "");
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+
+  return cleaned;
+}
+
+// Convert text to HTML
+function textToHTML(content, documentTitle) {
+  const lines = content.split("\n");
+  let html = "";
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      html += "<br>";
+      return;
+    }
+
+    // Títulos principales
+    if (trimmed.match(/^(CONSTE|CONSIDERANDOS|CONSIDERANDO|RECITALES)/i)) {
+      html += `<h2 style="text-align: center; font-weight: bold; margin-top: 20px; margin-bottom: 15px;">${trimmed}</h2>`;
+      return;
+    }
+
+    // Cláusulas
+    if (
+      trimmed.match(
+        /^(CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
+      )
+    ) {
+      html += `<h3 style="font-weight: bold; margin-top: 15px; margin-bottom: 10px;">${trimmed}</h3>`;
+      return;
+    }
+
+    // Numerales
+    if (trimmed.match(/^(\d+\.\d+\.?|[a-z]\))/)) {
+      html += `<p style="margin-left: 40px; margin-top: 8px; margin-bottom: 8px; line-height: 1.6;">${trimmed}</p>`;
+      return;
+    }
+
+    // Texto normal
+    html += `<p style="margin-top: 8px; margin-bottom: 8px; text-align: justify; line-height: 1.6;">${trimmed}</p>`;
+  });
+
+  const fullHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${documentTitle}</title>
+      <style>
+        body {
+          font-family: 'Arial', sans-serif;
+          margin: 30px;
+          line-height: 1.6;
+          color: #000;
+        }
+        h2 {
+          font-size: 16px;
+          font-weight: bold;
+          text-align: center;
+          margin: 20px 0 15px 0;
+        }
+        h3 {
+          font-size: 14px;
+          font-weight: bold;
+          margin: 15px 0 10px 0;
+        }
+        p {
+          font-size: 12px;
+          margin: 8px 0;
+          text-align: justify;
+          line-height: 1.6;
+        }
+        .page-break {
+          page-break-after: always;
+        }
+      </style>
+    </head>
+    <body>
+      ${html}
+    </body>
+    </html>
+  `;
+
+  return fullHTML;
+}
+
 // Generate document with Gemini AI
 async function generateDocumentContent(template, formData) {
   try {
@@ -112,10 +231,11 @@ async function generateDocumentContent(template, formData) {
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    const content = response.text();
+    let content = result.response.text();
 
     console.log("✅ Contenido generado por IA (Gemini)");
+
+    content = cleanMarkdown(content);
 
     if (!content || content.length < 100) {
       console.warn("⚠️ Contenido muy corto, usando fallback");
@@ -132,7 +252,7 @@ async function generateDocumentContent(template, formData) {
 
 function buildPrompt(templateId, data) {
   const prompts = {
-    1: `Eres un abogado experto en Derecho Comercial de Perú. Genera un CONTRATO DE SERVICIOS PROFESIONALES COMPLETO, FORMAL y LEGAL basado en estos datos:
+    1: `Eres un abogado experto en Derecho Comercial de Perú. Genera un CONTRATO DE SERVICIOS PROFESIONALES COMPLETO, FORMAL y LEGAL.
 
 Cliente: ${data.clientName}
 RUC: ${data.ruc}
@@ -141,114 +261,58 @@ Fecha Inicio: ${data.startDate}
 Fecha Término: ${data.endDate}
 Monto: ${data.amount}
 Condiciones de Pago: ${data.paymentTerms}
-Incluir cláusula de confidencialidad: ${data.confidentiality ? "Sí" : "No"}
+Confidencialidad: ${data.confidentiality ? "Sí" : "No"}
 
 INSTRUCCIONES CRÍTICAS:
-- Genera un contrato REAL, profesional y vinculante
-- Incluye TODAS estas secciones en orden:
-  1. Encabezado con "CONSTE POR EL PRESENTE"
-  2. Identificación de las partes
-  3. Recitales/Considerandos
-  4. PRIMERA: Objeto y alcance del servicio
-  5. SEGUNDA: Plazo de vigencia
-  6. TERCERA: Remuneración y forma de pago
-  7. CUARTA: Obligaciones del cliente
-  8. QUINTA: Obligaciones del prestador
-  9. SEXTA: Confidencialidad (si aplica)
-  10. SÉPTIMA: Terminación y resolución
-  11. OCTAVA: Ley aplicable (Perú)
-  12. NOVENA: Firmas y fecha
+- SOLO contenido legal, sin introducción
+- Estructura completa con todas las cláusulas
+- Lenguaje formal peruano
+- Mínimo 2000 caracteres
+- SIN Markdown, SIN asteriscos`,
 
-- Usa lenguaje legal formal peruano
-- Incluye citas a normas legales cuando sea pertinente
-- Mínimo 1500 caracteres
-- NO uses "Lorem Ipsum" ni textos genéricos
-- Personaliza TODO con los datos proporcionados`,
-
-    2: `Eres un abogado especialista en NDAs y Confidencialidad. Genera un ACUERDO DE CONFIDENCIALIDAD (NDA) COMPLETO, VINCULANTE Y LEGAL para Perú:
+    2: `Eres abogado especialista en NDAs. Genera un ACUERDO DE CONFIDENCIALIDAD COMPLETO para Perú.
 
 Parte Divulgadora: ${data.disclosingParty}
 Parte Receptora: ${data.receivingParty}
-Fecha de Efectividad: ${data.startDate}
-Duración: ${data.duration} años
+Fecha: ${data.startDate}
+Duración: ${data.duration}
 Jurisdicción: ${data.jurisdiction}
 
 INSTRUCCIONES:
-- Estructura formal con "CONSTE POR EL PRESENTE"
-- Secciones obligatorias:
-  1. Partes
-  2. Recitales
-  3. Definición de Información Confidencial
-  4. Obligaciones del Receptor
-  5. Exclusiones de Confidencialidad
-  6. Término de la Confidencialidad
-  7. Consecuencias del Incumplimiento
-  8. Cláusula de No Reclutamiento (opcional pero recomendada)
-  9. Ley Aplicable
-  10. Resolución de Disputas
-- Redacta con autoridad legal
-- Mínimo 1200 caracteres
-- Personaliza con datos reales`,
+- SOLO contenido legal formal
+- Todas las secciones estándar
+- Mínimo 1500 caracteres
+- SIN Markdown`,
 
-    3: `Eres un notario público de Perú. Genera un PODER NOTARIAL GENERAL VÁLIDO Y COMPLETO:
+    3: `Eres notario de Perú. Genera un PODER NOTARIAL GENERAL VÁLIDO.
 
 Poderdante: ${data.principalName}
-DNI del Poderdante: ${data.principalDNI}
+DNI: ${data.principalDNI}
 Apoderado: ${data.attorneyName}
-DNI del Apoderado: ${data.attorneyDNI}
-Poderes a Otorgar: ${data.powers}
+DNI Apoderado: ${data.attorneyDNI}
+Poderes: ${data.powers}
 Lugar: ${data.location}
 
 INSTRUCCIONES:
-- Formato notarial oficial peruano
-- Incluye:
-  1. Encabezamiento notarial
-  2. Comparecencia del otorgante
-  3. Identificación de ambas partes
-  4. Manifestación de voluntad del poderdante
-  5. Poderes específicos otorgados
-  6. Limitaciones y restricciones
-  7. Vigencia del poder
-  8. Revocabilidad
-  9. Aceptación del apoderado
-  10. Ley aplicable
-  11. Espacios para firmas y sello notarial
-- Redacta como un notario profesional
-- Mínimo 1300 caracteres
-- Formato reconocible y válido en Perú`,
+- Formato notarial legal
+- Mínimo 1200 caracteres
+- SIN Markdown`,
 
-    4: `Eres un abogado laboral certificado en Perú. Genera un CONTRATO LABORAL COMPLETO conforme a la legislación peruana vigente:
+    4: `Eres abogado laboral de Perú. Genera un CONTRATO LABORAL COMPLETO.
 
 Empleador: ${data.employerName}
 Empleado: ${data.employeeName}
 Puesto: ${data.position}
 Salario: ${data.salary}
-Fecha de Inicio: ${data.startDate}
-Jornada Laboral: ${data.workingHours}
+Inicio: ${data.startDate}
+Jornada: ${data.workingHours}
 Beneficios: ${data.benefits}
 
-INSTRUCCIONES CRÍTICAS:
-- Cumple con D.S. 003-97-TR (Texto Único Ordenado del Código Laboral)
-- Incluye TODAS las secciones:
-  1. Encabezamiento formal
-  2. Identificación de partes
-  3. Recitales
-  4. Objeto del contrato
-  5. Modalidad (tiempo indeterminado/determinado)
-  6. Remuneración y forma de pago
-  7. Jornada de trabajo y descansos
-  8. Beneficios (gratificación, CTS, AFP, EPS, seguros)
-  9. Obligaciones del empleador
-  10. Obligaciones del trabajador
-  11. Suspensión y terminación del contrato
-  12. Causales de despido
-  13. Disposiciones finales
-  14. Ley aplicable
-- Referencias a normas laborales peruanas
-- Redacta profesionalmente
-- Mínimo 1600 caracteres
-- Personaliza TODOS los datos
-- NO uses textos estándar, adapta a la situación`,
+INSTRUCCIONES:
+- Cumple D.S. 003-97-TR
+- SOLO contenido legal
+- Mínimo 1800 caracteres
+- SIN Markdown`,
   };
 
   return prompts[templateId] || prompts[1];
@@ -256,248 +320,193 @@ INSTRUCCIONES CRÍTICAS:
 
 function generateFallbackContent(template, data) {
   const contents = {
-    1: `CONTRATO DE SERVICIOS PROFESIONALES
-
-CONSTE POR EL PRESENTE DOCUMENTO:
-
-Que celebran de una parte, ${data.clientName}, con RUC N° ${
+    1: `CONSTE POR EL PRESENTE DOCUMENTO que celebran de una parte, ${
+      data.clientName
+    }, con RUC N° ${
       data.ruc
     }, denominado "EL CLIENTE", y de la otra parte, el Prestador de Servicios Profesionales, denominado "EL PRESTADOR".
 
-PRIMERO: OBJETO
-El PRESTADOR se obliga a prestar servicios profesionales de ${
-      data.serviceType
-    } al CLIENTE, bajo los términos establecidos en el presente contrato, conforme a la legislación peruana vigente.
+RECITALES
 
-SEGUNDO: VIGENCIA
+1. EL CLIENTE es una persona natural que requiere servicios profesionales.
+2. EL PRESTADOR es un profesional independiente con experiencia.
+3. Las partes acuerdan celebrar este contrato de locación de servicios.
+
+CLÁUSULA PRIMERA: OBJETO
+EL PRESTADOR prestará servicios de ${
+      data.serviceType
+    } al CLIENTE, bajo los términos establecidos en el presente contrato.
+
+CLÁUSULA SEGUNDA: PLAZO
 El presente contrato tendrá vigencia desde ${data.startDate} hasta ${
       data.endDate
     }.
 
-TERCERO: REMUNERACIÓN
+CLÁUSULA TERCERA: REMUNERACIÓN
 El CLIENTE pagará al PRESTADOR por los servicios prestados la suma de ${
       data.amount
     }, bajo las siguientes condiciones de pago: ${data.paymentTerms}.
 
-CUARTO: OBLIGACIONES DEL PRESTADOR
-- Prestar los servicios con profesionalismo y dedicación
-- Cumplir con los plazos establecidos
-- Mantener confidencialidad de la información compartida
-- Informar periódicamente del progreso
+CLÁUSULA CUARTA: OBLIGACIONES DEL CLIENTE
+a) Realizar el pago de la remuneración en la forma y oportunidad pactadas.
+b) Proporcionar toda la información y documentación necesaria.
+c) Colaborar activamente con el PRESTADOR.
 
-QUINTO: OBLIGACIONES DEL CLIENTE
-- Pagar la remuneración según lo pactado
-- Proporcionar la información necesaria
-- Facilitar el acceso a recursos necesarios
+CLÁUSULA QUINTA: OBLIGACIONES DEL PRESTADOR
+a) Ejecutar el servicio con diligencia y profesionalismo.
+b) Cumplir con los objetivos establecidos.
+c) Guardar reserva sobre las operaciones del CLIENTE.
 
+CLÁUSULA SEXTA: CONFIDENCIALIDAD
 ${
   data.confidentiality
-    ? `SEXTO: CONFIDENCIALIDAD
-Las partes se comprometen a guardar confidencialidad sobre toda información compartida en relación con este contrato, durante su vigencia y después de su término.`
-    : ""
+    ? "Las partes guardarán confidencialidad sobre toda información compartida en relación con este contrato."
+    : "No aplica confidencialidad especial."
 }
 
-SÉPTIMO: TERMINACIÓN
-El presente contrato podrá terminarse por mutuo acuerdo o por incumplimiento de cualquiera de las partes.
+CLÁUSULA SÉPTIMA: TERMINACIÓN
+El presente contrato terminará al vencimiento del plazo. Podrá resolverse por incumplimiento grave de cualquiera de las partes.
 
-OCTAVO: LEY APLICABLE
+CLÁUSULA OCTAVA: LEY APLICABLE
 El presente contrato se rige conforme a las leyes de la República del Perú.
 
-Firmado en Lima, el ${new Date().toLocaleDateString("es-PE")}`,
+CLÁUSULA NOVENA: FIRMAS
+En señal de conformidad, se firma en Lima, ${new Date().toLocaleDateString(
+      "es-PE"
+    )}`,
 
-    2: `ACUERDO DE CONFIDENCIALIDAD (NDA)
+    2: `ACUERDO DE CONFIDENCIALIDAD
 
-CONSTE POR EL PRESENTE:
+CONSTE POR EL PRESENTE que entre ${data.disclosingParty} (PARTE DIVULGADORA) y ${data.receivingParty} (PARTE RECEPTORA) se celebra el presente acuerdo.
 
-Entre ${data.disclosingParty}, denominado "PARTE DIVULGADORA", y ${
-      data.receivingParty
-    }, denominado "PARTE RECEPTORA", se celebra el presente ACUERDO DE CONFIDENCIALIDAD.
+RECITALES
 
-PRIMERO: OBJETO
-Las partes acuerdan guardar confidencialidad sobre toda información que sea compartida durante la vigencia de este acuerdo.
+Las partes acuerdan proteger información confidencial.
 
-SEGUNDO: DEFINICIÓN DE INFORMACIÓN CONFIDENCIAL
-Se considera información confidencial toda aquella que sea revelada por la Parte Divulgadora a la Parte Receptora, incluyendo pero no limitado a: datos comerciales, técnicos, financieros y estratégicos.
+CLÁUSULA PRIMERA: OBJETO
+Establecer términos para la protección de información confidencial.
 
-TERCERO: OBLIGACIONES
-La Parte Receptora se compromete a:
-- No divulgar la información confidencial a terceros sin consentimiento escrito
-- Usar la información únicamente para los fines acordados
-- Implementar medidas de seguridad razonables para proteger la información
+CLÁUSULA SEGUNDA: DEFINICIÓN
+Información confidencial: datos comerciales, técnicos, financieros y estratégicos.
 
-CUARTO: EXCEPCIONES
-La información que sea de dominio público no está sujeta a este acuerdo.
+CLÁUSULA TERCERA: OBLIGACIONES
+La Parte Receptora no divulgará información sin consentimiento de la Parte Divulgadora.
 
-QUINTO: TÉRMINO
-Este acuerdo permanecerá en vigor durante ${
-      data.duration
-    } años desde su fecha de efectividad (${data.startDate}).
+CLÁUSULA CUARTA: TÉRMINO
+Vigencia: ${data.duration} años desde ${data.startDate}.
 
-SEXTO: LEY APLICABLE
-Conforme a las leyes de ${data.jurisdiction}.
-
-Firmado en ${data.jurisdiction}, el ${new Date().toLocaleDateString("es-PE")}`,
+CLÁUSULA QUINTA: LEY APLICABLE
+${data.jurisdiction}`,
 
     3: `PODER NOTARIAL GENERAL
 
 Ante mí, Notario Público, comparece ${
       data.principalName
-    }, identificado con DNI N° ${
-      data.principalDNI
-    }, domiciliado en Perú, a quien en adelante se le denominará "EL OTORGANTE", y manifiesta su libre y voluntad de otorgar poder.
+    }, identificado con DNI N° ${data.principalDNI}.
 
-PRIMERO: PODER OTORGADO
-Por este medio, EL OTORGANTE otorga poder amplio, suficiente y general a favor de ${
-      data.attorneyName
-    }, identificado con DNI N° ${
+RECITALES
+
+Manifiesta su libre voluntad de otorgar poder.
+
+CLÁUSULA PRIMERA: PODER OTORGADO
+Otorga poder amplio a ${data.attorneyName}, identificado con DNI N° ${
       data.attorneyDNI
-    }, a quien en adelante se le denominará "EL APODERADO", para que lo represente judicial y extrajudicialmente en todos sus actos.
+    }.
 
-SEGUNDO: PODERES ESPECÍFICOS
+CLÁUSULA SEGUNDA: ALCANCE DEL PODER
 ${data.powers}
 
-TERCERO: VIGENCIA
-El presente poder es válido desde la fecha de su otorgamiento y permanecerá vigente hasta su revocación expresa.
-
-CUARTO: REVOCABILIDAD
-El OTORGANTE podrá revocar el presente poder en cualquier momento, mediante documento notarial.
+CLÁUSULA TERCERA: VIGENCIA
+El poder es válido desde su otorgamiento.
 
 Lugar: ${data.location}
-Fecha: ${data.date || new Date().toLocaleDateString("es-PE")}
-
-Conforme a las leyes de la República del Perú`,
+Fecha: ${data.date || new Date().toLocaleDateString("es-PE")}`,
 
     4: `CONTRATO LABORAL
 
-CONSTE POR EL PRESENTE DOCUMENTO:
+CONSTE POR EL PRESENTE que entre ${data.employerName} (EMPLEADOR) y ${data.employeeName} (TRABAJADOR) se celebra contrato de trabajo.
 
-Que celebran de una parte, ${
-      data.employerName
-    }, en calidad de EMPLEADOR, y de la otra parte, ${
-      data.employeeName
-    }, en calidad de TRABAJADOR.
+RECITALES
 
-PRIMERO: OBJETO DEL CONTRATO
-El TRABAJADOR se obliga a prestar servicios personales como ${
-      data.position
-    } para el EMPLEADOR, conforme a la legislación laboral peruana vigente.
+Celebran relación laboral conforme a ley.
 
-SEGUNDO: MODALIDAD
-El presente es un contrato de trabajo por tiempo indeterminado, de conformidad con el Decreto Supremo N° 003-97-TR.
+CLÁUSULA PRIMERA: OBJETO
+Prestación de servicios como ${data.position}.
 
-TERCERO: REMUNERACIÓN
-La remuneración mensual del TRABAJADOR será de ${
-      data.salary
-    }, pagadera en forma ordinaria dentro de los plazos legales.
+CLÁUSULA SEGUNDA: REMUNERACIÓN
+Salario mensual: ${data.salary}.
 
-CUARTO: JORNADA DE TRABAJO
-La jornada laboral será de ${data.workingHours}, conforme a la ley.
+CLÁUSULA TERCERA: JORNADA
+Jornada laboral: ${data.workingHours}.
 
-QUINTO: BENEFICIOS SOCIALES
-El TRABAJADOR tendrá derecho a: ${data.benefits}
+CLÁUSULA CUARTA: BENEFICIOS
+Beneficios: ${data.benefits}.
 
-SEXTO: FECHA DE INICIO
-El TRABAJADOR iniciará sus funciones el ${data.startDate}.
+CLÁUSULA QUINTA: INICIO
+Fecha de inicio: ${data.startDate}.
 
-SÉPTIMO: OBLIGACIONES DEL EMPLEADOR
-- Pagar oportunamente la remuneración
-- Proporcionar las condiciones de seguridad necesarias
-- Respetar los derechos laborales del trabajador
-
-OCTAVO: OBLIGACIONES DEL TRABAJADOR
-- Cumplir con sus funciones diligentemente
-- Acatar las instrucciones del empleador
-- Respetar las políticas de la empresa
-
-NOVENO: TERMINACIÓN
-El contrato podrá terminarse conforme a las causas establecidas en la legislación laboral peruana.
-
-DÉCIMO: LEY APLICABLE
-El presente contrato se rige conforme al Decreto Supremo N° 003-97-TR y demás normas laborales vigentes en Perú.
-
-Firmado en Lima, el ${new Date().toLocaleDateString("es-PE")}`,
+CLÁUSULA SEXTA: LEY APLICABLE
+D.S. 003-97-TR y normas laborales vigentes en Perú.`,
   };
 
   return contents[template.id] || contents[1];
 }
 
-// Create Word document
-async function createWordDocument(content, fileName) {
-  const paragraphs = content.split("\n").map(
-    (line) =>
-      new Paragraph({
-        text: line || " ",
-        spacing: { line: 360 },
-        alignment: "left",
-      })
-  );
+// Create PDF using Puppeteer
+async function createPdfDocument(htmlContent, fileName) {
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
 
-  const doc = new Document({
-    sections: [
-      {
-        properties: {},
-        children: paragraphs,
-      },
-    ],
-  });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
-  const buffer = await Packer.toBuffer(doc);
-  const filePath = path.join(docsFolder, `${fileName}.docx`);
-  fs.writeFileSync(filePath, buffer);
-  return filePath;
+    const filePath = path.join(docsFolder, `${fileName}.pdf`);
+
+    await page.pdf({
+      path: filePath,
+      format: "A4",
+      margin: { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" },
+      printBackground: true,
+    });
+
+    await browser.close();
+    console.log("✅ PDF creado correctamente con Puppeteer");
+    return filePath;
+  } catch (error) {
+    if (browser) await browser.close();
+    console.error("❌ Error generando PDF:", error);
+    throw error;
+  }
 }
 
-// Create PDF document
-function createPdfDocument(content, fileName) {
-  return new Promise((resolve, reject) => {
-    try {
-      const filePath = path.join(docsFolder, `${fileName}.pdf`);
-      const doc = new PDFDocument({
-        margin: 50,
-        size: "A4",
-        info: {
-          Title: fileName,
-          Author: "LegalDocs",
-        },
-      });
+// Create DOCX from HTML
+async function createWordDocument(htmlContent, fileName) {
+  try {
+    const filePath = path.join(docsFolder, `${fileName}.docx`);
 
-      const stream = fs.createWriteStream(filePath);
-      doc.pipe(stream);
+    // Eliminar etiquetas HTML y limpiar contenido
+    const wordContent = htmlContent
+      .replace(/<[^>]*>/g, "\n")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/\n\n+/g, "\n\n");
 
-      doc.fontSize(11).font("Helvetica");
+    fs.writeFileSync(filePath, wordContent, "utf8");
 
-      const lines = content.split("\n");
-      lines.forEach((line) => {
-        if (line.trim()) {
-          doc.text(line, {
-            align: "left",
-            width: 495,
-            continued: false,
-          });
-        } else {
-          doc.moveDown(0.3);
-        }
-      });
-
-      doc.end();
-
-      stream.on("finish", () => {
-        console.log("✅ PDF creado:", filePath);
-        resolve(filePath);
-      });
-
-      stream.on("error", (err) => {
-        console.error("❌ Error PDF:", err);
-        reject(err);
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
+    console.log("✅ Documento Word creado correctamente");
+    return filePath;
+  } catch (error) {
+    console.error("❌ Error creando Word:", error);
+    throw error;
+  }
 }
 
 // ROUTES
-
 app.get("/api/templates", (req, res) => {
   res.json(templates);
 });
@@ -518,16 +527,16 @@ app.post("/api/generate-document", async (req, res) => {
     console.log(`\n📄 Generando documento: ${template.name}`);
     console.log(`📋 Formato: ${format.toUpperCase()}`);
 
-    // Generate with Gemini AI
     const content = await generateDocumentContent(template, formData);
+    const htmlContent = textToHTML(content, template.name);
 
     const fileName = `${template.name.replace(/\s+/g, "_")}_${Date.now()}`;
     let filePath;
 
     if (format === "pdf") {
-      filePath = await createPdfDocument(content, fileName);
+      filePath = await createPdfDocument(htmlContent, fileName);
     } else {
-      filePath = await createWordDocument(content, fileName);
+      filePath = await createWordDocument(htmlContent, fileName);
     }
 
     console.log(`✅ Documento listo para descargar\n`);
@@ -567,7 +576,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 LegalDocs Backend - Gemini Edition`);
+  console.log(`\n🚀 LegalDocs Backend - Gemini + Puppeteer Edition`);
   console.log(`   http://localhost:${PORT}`);
   console.log(`\n📊 Modelo IA: Gemini Pro`);
   console.log(

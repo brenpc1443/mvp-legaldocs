@@ -14,7 +14,10 @@
     "docx": "^8.5.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "pdfkit": "^0.13.0"
+    "htmltopdf": "^0.0.10",
+    "mammoth": "^1.11.0",
+    "pdfkit": "^0.13.0",
+    "puppeteer": "^24.31.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
