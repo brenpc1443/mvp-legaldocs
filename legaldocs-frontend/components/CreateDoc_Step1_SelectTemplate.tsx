@@ -1,13 +1,37 @@
 import React from "react";
-import { Scale, FileText, Shield, Briefcase, Users, ArrowRight, Check } from "lucide-react";
+import {
+  Scale,
+  FileText,
+  Shield,
+  Briefcase,
+  Users,
+  ArrowRight,
+  Check,
+} from "lucide-react";
 
-export default function CreateDocStep1({ navigate }) {
-  const templates = [
+interface Template {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  color: string;
+  popular: boolean;
+  fields: number;
+}
+
+interface CreateDocStep1Props {
+  navigate: (route: string, params?: Record<string, any>) => void;
+}
+
+export default function CreateDocStep1({ navigate }: CreateDocStep1Props) {
+  const templates: Template[] = [
     {
       id: 1,
       name: "Contrato de Servicios Profesionales",
       category: "Contratos",
-      description: "Contrato estándar para prestación de servicios profesionales entre empresas",
+      description:
+        "Contrato estándar para prestación de servicios profesionales entre empresas",
       icon: Briefcase,
       color: "var(--color-navy)",
       popular: true,
@@ -17,7 +41,8 @@ export default function CreateDocStep1({ navigate }) {
       id: 2,
       name: "Acuerdo de Confidencialidad (NDA)",
       category: "NDAs",
-      description: "Acuerdo de no divulgación para proteger información confidencial",
+      description:
+        "Acuerdo de no divulgación para proteger información confidencial",
       icon: Shield,
       color: "#10b981",
       popular: true,
@@ -27,7 +52,8 @@ export default function CreateDocStep1({ navigate }) {
       id: 3,
       name: "Poder Notarial General",
       category: "Poderes",
-      description: "Poder notarial para representación legal en diversos actos jurídicos",
+      description:
+        "Poder notarial para representación legal en diversos actos jurídicos",
       icon: FileText,
       color: "var(--color-gold)",
       popular: false,
@@ -45,9 +71,10 @@ export default function CreateDocStep1({ navigate }) {
     },
   ];
 
-  const [selectedTemplate, setSelectedTemplate] = React.useState(null);
+  const [selectedTemplate, setSelectedTemplate] =
+    React.useState<Template | null>(null);
 
-  const handleTemplateSelect = (template) => {
+  const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
   };
 
@@ -58,7 +85,10 @@ export default function CreateDocStep1({ navigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafbfc]" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div
+      className="min-h-screen bg-[#fafbfc]"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
       {/* Header */}
       <header
         className="border-b bg-white px-8 py-5"
@@ -73,7 +103,10 @@ export default function CreateDocStep1({ navigate }) {
               className="w-10 h-10 rounded-[8px] flex items-center justify-center"
               style={{ backgroundColor: "var(--color-navy)" }}
             >
-              <Scale className="w-6 h-6" style={{ color: "var(--color-gold)" }} />
+              <Scale
+                className="w-6 h-6"
+                style={{ color: "var(--color-gold)" }}
+              />
             </div>
             <span
               style={{
@@ -114,24 +147,32 @@ export default function CreateDocStep1({ navigate }) {
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center shadow-sm"
                     style={{
-                      backgroundColor: step.number === 1 ? "var(--color-navy)" : "#f3f4f6",
-                      color: step.number === 1 ? "var(--color-gold)" : "#9ca3af",
+                      backgroundColor:
+                        step.number === 1 ? "var(--color-navy)" : "#f3f4f6",
+                      color:
+                        step.number === 1 ? "var(--color-gold)" : "#9ca3af",
                     }}
                   >
-                    <span style={{ fontSize: "16px", fontWeight: "600" }}>{step.number}</span>
+                    <span style={{ fontSize: "16px", fontWeight: "600" }}>
+                      {step.number}
+                    </span>
                   </div>
                   <span
                     style={{
                       fontSize: "15px",
                       fontWeight: step.number === 1 ? "600" : "500",
-                      color: step.number === 1 ? "var(--color-navy)" : "#9ca3af",
+                      color:
+                        step.number === 1 ? "var(--color-navy)" : "#9ca3af",
                     }}
                   >
                     {step.label}
                   </span>
                 </div>
                 {index < 2 && (
-                  <div className="flex-1 h-0.5 mx-6" style={{ backgroundColor: "#e5e7eb" }} />
+                  <div
+                    className="flex-1 h-0.5 mx-6"
+                    style={{ backgroundColor: "#e5e7eb" }}
+                  />
                 )}
               </div>
             ))}
@@ -191,7 +232,11 @@ export default function CreateDocStep1({ navigate }) {
                       backgroundColor: `${template.color}15`,
                     }}
                   >
-                    <Icon className="w-7 h-7" style={{ color: template.color }} strokeWidth={2} />
+                    <Icon
+                      className="w-7 h-7"
+                      style={{ color: template.color }}
+                      strokeWidth={2}
+                    />
                   </div>
 
                   {/* Content */}
@@ -212,7 +257,11 @@ export default function CreateDocStep1({ navigate }) {
                           className="w-6 h-6 rounded-full flex items-center justify-center"
                           style={{ backgroundColor: "var(--color-gold)" }}
                         >
-                          <Check className="w-4 h-4" style={{ color: "var(--color-navy)" }} strokeWidth={3} />
+                          <Check
+                            className="w-4 h-4"
+                            style={{ color: "var(--color-navy)" }}
+                            strokeWidth={3}
+                          />
                         </div>
                       )}
                     </div>
@@ -264,7 +313,9 @@ export default function CreateDocStep1({ navigate }) {
             disabled={!selectedTemplate}
             className="flex items-center gap-2 px-8 py-3.5 rounded-[8px] transition-all"
             style={{
-              backgroundColor: selectedTemplate ? "var(--color-navy)" : "#e5e7eb",
+              backgroundColor: selectedTemplate
+                ? "var(--color-navy)"
+                : "#e5e7eb",
               color: selectedTemplate ? "var(--color-white)" : "#9ca3af",
               fontSize: "15px",
               fontWeight: "600",

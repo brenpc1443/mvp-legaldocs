@@ -1,16 +1,14 @@
 // LegalDocs Backend - Express.js
-// npm install express cors dotenv axios mammoth docx2pdf pdfkit busboy multer
-
 import express from "express";
 import cors from "cors";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 import {
-  DocumentPacker,
-  Packer,
   Document,
+  Packer,
   Paragraph,
   Table,
   TableRow,
@@ -21,20 +19,37 @@ import {
 } from "docx";
 import PDFDocument from "pdfkit";
 
+// Load environment variables
+dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Validate API Key
+if (
+  !process.env.OPENROUTER_API_KEY ||
+  process.env.OPENROUTER_API_KEY === "sk-or-v1-your-api-key-here"
+) {
+  console.error("❌ ERROR: OPENROUTER_API_KEY no configurada en .env");
+  console.error(
+    "Por favor, copia .env.example a .env y configura tu clave API"
+  );
+  process.exit(1);
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-// Create documents folder
-if (!fs.existsSync("generated_documents")) {
-  fs.mkdirSync("generated_documents");
+// Create documents folder with absolute path
+const docsFolder = path.join(__dirname, "generated_documents");
+if (!fs.existsSync(docsFolder)) {
+  fs.mkdirSync(docsFolder, { recursive: true });
+  console.log("📁 Carpeta de documentos creada:", docsFolder);
 }
 
 // Template definitions with content structure
@@ -119,9 +134,7 @@ async function generateDocumentContent(template, formData) {
       },
       {
         headers: {
-          Authorization: `Bearer ${
-            process.env.OPENROUTER_API_KEY || "your-key-here"
-          }`,
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "HTTP-Referer": "http://localhost:3000",
         },
       }
@@ -129,7 +142,7 @@ async function generateDocumentContent(template, formData) {
 
     return response.data.choices[0].message.content;
   } catch (error) {
-    console.error("AI API Error:", error.message);
+    console.error("⚠️ AI API Error:", error.message);
     return generateFallbackContent(template, formData);
   }
 }
@@ -261,7 +274,7 @@ async function createWordDocument(content, fileName) {
   });
 
   const buffer = await Packer.toBuffer(doc);
-  const filePath = path.join("generated_documents", `${fileName}.docx`);
+  const filePath = path.join(docsFolder, `${fileName}.docx`);
   fs.writeFileSync(filePath, buffer);
   return filePath;
 }
@@ -269,7 +282,7 @@ async function createWordDocument(content, fileName) {
 // Create PDF document
 function createPdfDocument(content, fileName) {
   const doc = new PDFDocument();
-  const filePath = path.join("generated_documents", `${fileName}.pdf`);
+  const filePath = path.join(docsFolder, `${fileName}.pdf`);
 
   doc.pipe(fs.createWriteStream(filePath));
 
@@ -323,7 +336,7 @@ app.post("/api/generate-document", async (req, res) => {
       `${template.name}.${format === "pdf" ? "pdf" : "docx"}`
     );
   } catch (error) {
-    console.error("Error generating document:", error);
+    console.error("❌ Error generating document:", error);
     res
       .status(500)
       .json({ error: "Error generating document", details: error.message });
@@ -332,17 +345,17 @@ app.post("/api/generate-document", async (req, res) => {
 
 // Get generated documents
 app.get("/api/documents", (req, res) => {
-  const files = fs.readdirSync("generated_documents").map((file) => ({
+  const files = fs.readdirSync(docsFolder).map((file) => ({
     name: file,
-    size: fs.statSync(path.join("generated_documents", file)).size,
-    created: fs.statSync(path.join("generated_documents", file)).birthtime,
+    size: fs.statSync(path.join(docsFolder, file)).size,
+    created: fs.statSync(path.join(docsFolder, file)).birthtime,
   }));
   res.json(files);
 });
 
 // Download document
 app.get("/api/download/:fileName", (req, res) => {
-  const filePath = path.join("generated_documents", req.params.fileName);
+  const filePath = path.join(docsFolder, req.params.fileName);
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: "File not found" });
   }
@@ -362,4 +375,5 @@ app.listen(PORT, () => {
   console.log(`   POST /api/generate-document`);
   console.log(`   GET  /api/documents`);
   console.log(`   GET  /api/download/:fileName`);
+  console.log(`   GET  /api/health`);
 });

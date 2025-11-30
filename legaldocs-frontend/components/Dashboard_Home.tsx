@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 type DashboardHomeProps = {
-  navigate: (route: string) => void;
+  navigate: (route: string, params?: any) => void;
 };
 
 export default function DashboardHome({ navigate }: DashboardHomeProps) {
@@ -47,7 +47,10 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#fafbfc]" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div
+      className="min-h-screen bg-[#fafbfc]"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
       {/* Sidebar */}
       <aside
         className="fixed left-0 top-0 h-full w-64 border-r"
@@ -57,7 +60,10 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b" style={{ borderColor: "#2a3441" }}>
+        <div
+          className="flex items-center gap-3 px-6 py-6 border-b"
+          style={{ borderColor: "#2a3441" }}
+        >
           <div
             className="w-10 h-10 rounded-[8px] flex items-center justify-center"
             style={{ backgroundColor: "rgba(212, 165, 116, 0.2)" }}
@@ -88,7 +94,9 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                 }}
               >
                 <Home className="w-5 h-5" strokeWidth={2} />
-                <span style={{ fontSize: "15px", fontWeight: "500" }}>Inicio</span>
+                <span style={{ fontSize: "15px", fontWeight: "500" }}>
+                  Inicio
+                </span>
               </button>
             </li>
             <li>
@@ -99,7 +107,9 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                 style={{ color: "#9ca3af" }}
               >
                 <FileText className="w-5 h-5" strokeWidth={2} />
-                <span style={{ fontSize: "15px", fontWeight: "500" }}>Plantillas</span>
+                <span style={{ fontSize: "15px", fontWeight: "500" }}>
+                  Plantillas
+                </span>
               </button>
             </li>
             <li>
@@ -110,7 +120,9 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                 style={{ color: "#9ca3af" }}
               >
                 <Plus className="w-5 h-5" strokeWidth={2} />
-                <span style={{ fontSize: "15px", fontWeight: "500" }}>Generar documento</span>
+                <span style={{ fontSize: "15px", fontWeight: "500" }}>
+                  Generar documento
+                </span>
               </button>
             </li>
             <li>
@@ -121,7 +133,9 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                 style={{ color: "#9ca3af" }}
               >
                 <Folder className="w-5 h-5" strokeWidth={2} />
-                <span style={{ fontSize: "15px", fontWeight: "500" }}>Mis documentos</span>
+                <span style={{ fontSize: "15px", fontWeight: "500" }}>
+                  Mis documentos
+                </span>
               </button>
             </li>
             <li>
@@ -131,7 +145,9 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                 style={{ color: "#9ca3af" }}
               >
                 <Settings className="w-5 h-5" strokeWidth={2} />
-                <span style={{ fontSize: "15px", fontWeight: "500" }}>Configuración</span>
+                <span style={{ fontSize: "15px", fontWeight: "500" }}>
+                  Configuración
+                </span>
               </button>
             </li>
           </ul>
@@ -225,7 +241,11 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                 id="btn_notifications"
                 className="relative p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
               >
-                <Bell className="w-5 h-5" style={{ color: "var(--color-charcoal)" }} strokeWidth={2} />
+                <Bell
+                  className="w-5 h-5"
+                  style={{ color: "var(--color-charcoal)" }}
+                  strokeWidth={2}
+                />
                 <span
                   className="absolute top-1 right-1 w-2 h-2 rounded-full"
                   style={{ backgroundColor: "#ef4444" }}
@@ -237,7 +257,10 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                   className="w-10 h-10 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: "var(--color-navy)" }}
                 >
-                  <User className="w-5 h-5" style={{ color: "var(--color-gold)" }} />
+                  <User
+                    className="w-5 h-5"
+                    style={{ color: "var(--color-gold)" }}
+                  />
                 </div>
                 <div>
                   <p
@@ -330,7 +353,11 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                       className="w-12 h-12 rounded-[8px] flex items-center justify-center"
                       style={{ backgroundColor: `${stat.color}15` }}
                     >
-                      <Icon className="w-6 h-6" style={{ color: stat.color }} strokeWidth={2} />
+                      <Icon
+                        className="w-6 h-6"
+                        style={{ color: stat.color }}
+                        strokeWidth={2}
+                      />
                     </div>
                   </div>
                   <h3
@@ -383,7 +410,11 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                   className="w-16 h-16 rounded-[8px] flex items-center justify-center"
                   style={{ backgroundColor: "var(--color-gold)" }}
                 >
-                  <Plus className="w-8 h-8" style={{ color: "var(--color-navy)" }} strokeWidth={2.5} />
+                  <Plus
+                    className="w-8 h-8"
+                    style={{ color: "var(--color-navy)" }}
+                    strokeWidth={2.5}
+                  />
                 </div>
                 <div>
                   <h3
@@ -430,7 +461,10 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
               boxShadow: "0 1px 3px 0 rgba(26, 35, 50, 0.08)",
             }}
           >
-            <div className="px-6 py-5 border-b" style={{ borderColor: "#e5e7eb" }}>
+            <div
+              className="px-6 py-5 border-b"
+              style={{ borderColor: "#e5e7eb" }}
+            >
               <div className="flex items-center justify-between">
                 <h2
                   style={{
@@ -515,8 +549,10 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                         style={{
                           fontSize: "13px",
                           fontWeight: "500",
-                          color: doc.status === "Completado" ? "#065f46" : "#92400e",
-                          backgroundColor: doc.status === "Completado" ? "#dcfce7" : "#fef3c7",
+                          color:
+                            doc.status === "Completado" ? "#065f46" : "#92400e",
+                          backgroundColor:
+                            doc.status === "Completado" ? "#dcfce7" : "#fef3c7",
                         }}
                       >
                         {doc.status}
@@ -525,7 +561,11 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                         className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
                         title="Ver documento"
                       >
-                        <Eye className="w-5 h-5" style={{ color: "var(--color-charcoal)" }} strokeWidth={2} />
+                        <Eye
+                          className="w-5 h-5"
+                          style={{ color: "var(--color-charcoal)" }}
+                          strokeWidth={2}
+                        />
                       </button>
                       <button
                         className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"

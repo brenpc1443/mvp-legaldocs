@@ -8,26 +8,41 @@ import CreateDocStep3 from "../components/CreateDoc_Step3_Review";
 import GeneratedSuccessModal from "../components/Generated_Success_Modal";
 import MyDocumentsList from "../components/MyDocuments_List";
 
-type FormDataType = {
-  clientName: string;
-  documentType: string;
-  startDate: string;
-  ruc: string;
-  clauses?: {
-    confidentiality?: boolean;
-    [key: string]: any;
-  };
+interface Clauses {
+  confidentiality?: boolean;
+  termination?: boolean;
+  arbitration?: boolean;
+  warranty?: boolean;
   [key: string]: any;
+}
+
+interface FormDataType {
+  clientName?: string;
+  documentType?: string;
+  startDate?: string;
+  ruc?: string;
+  clauses?: Clauses;
+  [key: string]: any;
+}
+
+interface Template {
+  id: number;
+  name: string;
+  [key: string]: any;
+}
+
+type NavigationData = {
+  template?: Template;
+  formData?: FormDataType;
 };
 
 export default function App() {
-  const [currentFrame, setCurrentFrame] = useState("Dashboard_Home");
+  const [currentFrame, setCurrentFrame] = useState<string>("Dashboard_Home");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<{
-    [key: string]: any;
-    id: number;
-    name: string;
-  }>({ id: 0, name: "" });
+  const [selectedTemplate, setSelectedTemplate] = useState<Template>({
+    id: 0,
+    name: "",
+  });
   const [formData, setFormData] = useState<FormDataType>({
     clientName: "",
     documentType: "",
@@ -36,7 +51,7 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
 
-  const navigate = (frame: any, data: any = null) => {
+  const navigate = (frame: string, data: NavigationData | null = null) => {
     setCurrentFrame(frame);
     if (data) {
       if (data.template) setSelectedTemplate(data.template);
@@ -44,7 +59,7 @@ export default function App() {
     }
   };
 
-  const frames = {
+  const frames: Record<string, React.ReactNode> = {
     Dashboard_Home: <DashboardHome navigate={navigate} />,
     Templates_List: <TemplatesList navigate={navigate} />,
     Template_Detail: (
@@ -57,7 +72,7 @@ export default function App() {
     CreateDoc_Step3_Review: (
       <CreateDocStep3
         navigate={navigate}
-        formData={formData}
+        formData={formData as any}
         template={selectedTemplate}
         setShowSuccessModal={setShowSuccessModal}
         loading={loading}
@@ -69,7 +84,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "Inter, sans-serif" }}>
-      {frames[currentFrame as keyof typeof frames]}
+      {frames[currentFrame]}
       {showSuccessModal && (
         <GeneratedSuccessModal
           navigate={navigate}
