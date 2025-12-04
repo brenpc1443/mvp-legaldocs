@@ -566,7 +566,7 @@ app.post("/api/generate-document", async (req, res) => {
   } catch (error) {
     console.error("❌ Error:", error.message);
     res.status(500).json({
-      error: "Error generating document",
+      error: "Error generating document :'v",
       details: error.message,
     });
   }
