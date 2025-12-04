@@ -517,6 +517,18 @@ app.get("/api/templates/:id", (req, res) => {
   res.json(template);
 });
 
+// Añade esta función para extraer solo el texto del HTML
+function extractTextFromHTML(htmlContent) {
+  // Elimina las etiquetas style
+  let text = htmlContent.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  // Elimina todas las etiquetas HTML
+  text = text.replace(/<[^>]*>/g, "");
+  // Limpia espacios múltiples
+  text = text.replace(/\n\n+/g, "\n\n").trim();
+  return text;
+}
+
+// Modifica la ruta existente /api/generate-document así:
 app.post("/api/generate-document", async (req, res) => {
   try {
     const { templateId, formData, format } = req.body;
@@ -529,6 +541,12 @@ app.post("/api/generate-document", async (req, res) => {
 
     const content = await generateDocumentContent(template, formData);
     const htmlContent = textToHTML(content, template.name);
+
+    // Si es preview, retorna solo el texto limpio
+    if (format === "preview") {
+      const plainText = extractTextFromHTML(content);
+      return res.send(plainText);
+    }
 
     const fileName = `${template.name.replace(/\s+/g, "_")}_${Date.now()}`;
     let filePath;
