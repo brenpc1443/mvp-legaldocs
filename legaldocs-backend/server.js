@@ -140,20 +140,27 @@ function cleanMarkdown(text) {
 }
 
 // Convert text to HTML
+// Reemplaza la función textToHTML completa:
+
+// Reemplaza textToHTML con la versión original:
+
 function textToHTML(content, documentTitle) {
   const lines = content.split("\n");
   let html = "";
 
   lines.forEach((line) => {
-    const trimmed = line.trim();
+    let trimmed = line.trim();
 
     if (!trimmed) {
       html += "<br>";
       return;
     }
 
+    // Convierte **texto** a <strong>texto</strong>
+    trimmed = trimmed.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
     // Títulos principales
-    if (trimmed.match(/^(CONSTE|CONSIDERANDOS|CONSIDERANDO|RECITALES)/i)) {
+    if (trimmed.match(/^(CONSIDERANDOS|CONSIDERANDO|RECITALES)/i)) {
       html += `<h2 style="text-align: center; font-weight: bold; margin-top: 20px; margin-bottom: 15px;">${trimmed}</h2>`;
       return;
     }
@@ -164,18 +171,18 @@ function textToHTML(content, documentTitle) {
         /^(CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
       )
     ) {
-      html += `<h3 style="font-weight: bold; margin-top: 15px; margin-bottom: 10px;">${trimmed}</h3>`;
+      html += `<h3 style="font-weight: bold; margin-top: 12px; margin-bottom: 10px;">${trimmed}</h3>`;
       return;
     }
 
     // Numerales
     if (trimmed.match(/^(\d+\.\d+\.?|[a-z]\))/)) {
-      html += `<p style="margin-left: 40px; margin-top: 8px; margin-bottom: 8px; line-height: 1.6;">${trimmed}</p>`;
+      html += `<p style="margin-left: 40px; line-height: 1.6;">${trimmed}</p>`;
       return;
     }
 
     // Texto normal
-    html += `<p style="margin-top: 8px; margin-bottom: 8px; text-align: justify; line-height: 1.6;">${trimmed}</p>`;
+    html += `<p style="text-align: justify; line-height: 1.6;">${trimmed}</p>`;
   });
 
   const fullHTML = `
@@ -191,22 +198,42 @@ function textToHTML(content, documentTitle) {
           line-height: 1.6;
           color: #000;
         }
-        h2 {
+        .header {
+          text-align: center;
+          margin-bottom: 40px;
+        }
+        .header h1 {
+          font-size: 28px;
+          font-weight: bold;
+          color: #1a2332;
+          margin: 20px 0 10px 0;
+          letter-spacing: -0.01em;
+        }
+        .header p {
           font-size: 16px;
+          font-weight: 500;
+          color: #3d4451;
+          margin: 0;
+        }
+        h2 {
+          font-size: 20px;
           font-weight: bold;
           text-align: center;
           margin: 20px 0 15px 0;
         }
         h3 {
-          font-size: 14px;
+          font-size: 16px;
           font-weight: bold;
           margin: 15px 0 10px 0;
         }
         p {
-          font-size: 12px;
+          font-size: 14px;
           margin: 8px 0;
           text-align: justify;
           line-height: 1.6;
+        }
+        strong {
+          font-weight: bold;
         }
         .page-break {
           page-break-after: always;
@@ -214,6 +241,9 @@ function textToHTML(content, documentTitle) {
       </style>
     </head>
     <body>
+      <div class="header">
+        <h1>${documentTitle}</h1>
+      </div>
       ${html}
     </body>
     </html>
@@ -222,9 +252,124 @@ function textToHTML(content, documentTitle) {
   return fullHTML;
 }
 
+const documentCache = new Map();
+
+// Y remove cleanMarkdownForPreview si la añadiste, o simplemente borrala
+
+function buildPrompt(templateId, data) {
+  const prompts = {
+    1: `Eres un abogado especialista en derecho comercial peruano. Genera ÚNICAMENTE un contrato de locación de servicios profesionales según la legislación peruana (Código Civil artículos 1764-1789, Decreto Supremo 003-97-TR). 
+
+DATOS:
+- Comitente: ${data.clientName}
+- RUC: ${data.ruc}
+- Servicio: ${data.serviceType}
+- Fecha inicio: ${data.startDate}
+- Fecha término: ${data.endDate}
+- Monto: ${data.amount}
+- Forma de pago: ${data.paymentTerms}
+- Confidencialidad: ${
+      data.confidentiality ? "Sí incluir cláusula" : "No incluir"
+    }
+
+INSTRUCCIONES ESTRICTAS:
+- Solo documento legal, sin introducciones ni explicaciones
+- Lenguaje jurídico peruano formal y preciso
+- Máximo 2500 caracteres
+- Estructura clara con cláusulas numeradas
+- Citar artículos pertinentes del Código Civil peruano
+- Sin saludo, despedida ni comentarios
+- Responde SOLO el documento`,
+
+    2: `Eres un abogado especialista en derecho comercial peruano. Genera ÚNICAMENTE un acuerdo de confidencialidad (NDA) según leyes peruanas (Código Civil artículos 1764-1789).
+
+DATOS:
+- Parte divulgadora: ${data.disclosingParty}
+- Parte receptora: ${data.receivingParty}
+- Fecha inicio: ${data.startDate}
+- Duración: ${data.duration} años
+- Jurisdicción: ${data.jurisdiction}
+
+INSTRUCCIONES ESTRICTAS:
+- Solo documento legal, sin introducciones ni explicaciones
+- Lenguaje jurídico peruano formal y preciso
+- Máximo 2000 caracteres
+- Estructura clara con cláusulas numeradas
+- Citar artículos pertinentes
+- Sin saludo, despedida ni comentarios
+- Responde SOLO el documento`,
+
+    3: `Eres un notario peruano especialista en poderes. Genera ÚNICAMENTE un poder general irrevocable según legislación peruana (Código Civil artículos 137-149).
+
+DATOS:
+- Poderdante: ${data.principalName}
+- DNI poderdante: ${data.principalDNI}
+- Apoderado: ${data.attorneyName}
+- DNI apoderado: ${data.attorneyDNI}
+- Poderes: ${data.powers}
+- Lugar: ${data.location}
+
+INSTRUCCIONES ESTRICTAS:
+- Solo documento legal, sin introducciones ni explicaciones
+- Lenguaje jurídico peruano formal y preciso
+- Máximo 1800 caracteres
+- Estructura notarial clara
+- Citar artículos pertinentes del Código Civil
+- Sin saludo, despedida ni comentarios
+- Responde SOLO el documento`,
+
+    4: `Eres un abogado laboralista peruano. Genera ÚNICAMENTE un contrato de trabajo a plazo determinado según legislación peruana (D.S. 003-97-TR, Código Civil artículos 1351-1374).
+
+DATOS:
+- Empleador: ${data.employerName}
+- Empleado: ${data.employeeName}
+- Puesto: ${data.position}
+- Salario: ${data.salary}
+- Fecha inicio: ${data.startDate}
+- Jornada: ${data.workingHours}
+- Beneficios: ${data.benefits}
+
+INSTRUCCIONES ESTRICTAS:
+- Solo documento legal, sin introducciones ni explicaciones
+- Lenguaje jurídico peruano formal y preciso
+- Máximo 2200 caracteres
+- Estructura clara con cláusulas numeradas
+- Citar D.S. 003-97-TR y artículos pertinentes
+- Incluir beneficios según ley laboral peruana
+- Sin saludo, despedida ni comentarios
+- Responde SOLO el documento`,
+  };
+
+  return prompts[templateId] || prompts[1];
+}
+
+function cleanMarkdownForPreview(text) {
+  // Convierte Markdown a formato visual de texto
+  return (
+    text
+      // Negritas: **texto** -> [NEGRITA] texto [/NEGRITA] (para mostrar visualmente)
+      .replace(/\*\*(.*?)\*\*/g, (match, content) => {
+        return content.toUpperCase(); // O usa otro formato visual
+      })
+      // Cursivas: *texto* -> _texto_
+      .replace(/\*(.*?)\*/g, "$1")
+      // Limpia markdowns sobrantes
+      .trim()
+  );
+}
+
 // Generate document with Gemini AI
 async function generateDocumentContent(template, formData) {
   try {
+    // Crea una clave única para este documento
+    const cacheKey = `${template.id}_${JSON.stringify(formData)}`;
+
+    // Si ya existe en cache, devuelve el contenido cached
+    if (documentCache.has(cacheKey)) {
+      console.log("✅ Usando contenido en caché");
+      return documentCache.get(cacheKey);
+    }
+
     const prompt = buildPrompt(template.id, formData);
 
     console.log("🤖 Enviando a Gemini API...");
@@ -235,87 +380,30 @@ async function generateDocumentContent(template, formData) {
 
     console.log("✅ Contenido generado por IA (Gemini)");
 
-    content = cleanMarkdown(content);
+    // Limpia backticks de código si los hay
+    content = content.replace(/^```[\w]*\n?/gm, "").replace(/\n?```$/gm, "");
+    content = content.trim();
 
     if (!content || content.length < 100) {
       console.warn("⚠️ Contenido muy corto, usando fallback");
-      return generateFallbackContent(template, formData);
+      content = generateFallbackContent(template, formData);
     }
+
+    // Cachea el contenido
+    documentCache.set(cacheKey, content);
 
     return content;
   } catch (error) {
     console.error("❌ Error con Gemini API:", error.message);
     console.log("📝 Usando contenido fallback pre-escrito");
-    return generateFallbackContent(template, formData);
+    const fallbackContent = generateFallbackContent(template, formData);
+
+    // También cachea el fallback
+    const cacheKey = `${template.id}_${JSON.stringify(formData)}`;
+    documentCache.set(cacheKey, fallbackContent);
+
+    return fallbackContent;
   }
-}
-
-function buildPrompt(templateId, data) {
-  const prompts = {
-    1: `Eres un abogado experto en Derecho Comercial de Perú. Genera un CONTRATO DE SERVICIOS PROFESIONALES COMPLETO, FORMAL y LEGAL.
-
-Cliente: ${data.clientName}
-RUC: ${data.ruc}
-Tipo de Servicio: ${data.serviceType}
-Fecha Inicio: ${data.startDate}
-Fecha Término: ${data.endDate}
-Monto: ${data.amount}
-Condiciones de Pago: ${data.paymentTerms}
-Confidencialidad: ${data.confidentiality ? "Sí" : "No"}
-
-INSTRUCCIONES CRÍTICAS:
-- SOLO contenido legal, sin introducción
-- Estructura completa con todas las cláusulas
-- Lenguaje formal peruano
-- Mínimo 2000 caracteres
-- SIN Markdown, SIN asteriscos`,
-
-    2: `Eres abogado especialista en NDAs. Genera un ACUERDO DE CONFIDENCIALIDAD COMPLETO para Perú.
-
-Parte Divulgadora: ${data.disclosingParty}
-Parte Receptora: ${data.receivingParty}
-Fecha: ${data.startDate}
-Duración: ${data.duration}
-Jurisdicción: ${data.jurisdiction}
-
-INSTRUCCIONES:
-- SOLO contenido legal formal
-- Todas las secciones estándar
-- Mínimo 1500 caracteres
-- SIN Markdown`,
-
-    3: `Eres notario de Perú. Genera un PODER NOTARIAL GENERAL VÁLIDO.
-
-Poderdante: ${data.principalName}
-DNI: ${data.principalDNI}
-Apoderado: ${data.attorneyName}
-DNI Apoderado: ${data.attorneyDNI}
-Poderes: ${data.powers}
-Lugar: ${data.location}
-
-INSTRUCCIONES:
-- Formato notarial legal
-- Mínimo 1200 caracteres
-- SIN Markdown`,
-
-    4: `Eres abogado laboral de Perú. Genera un CONTRATO LABORAL COMPLETO.
-
-Empleador: ${data.employerName}
-Empleado: ${data.employeeName}
-Puesto: ${data.position}
-Salario: ${data.salary}
-Inicio: ${data.startDate}
-Jornada: ${data.workingHours}
-Beneficios: ${data.benefits}
-
-INSTRUCCIONES:
-- Cumple D.S. 003-97-TR
-- SOLO contenido legal
-- Mínimo 1800 caracteres
-- SIN Markdown`,
-  };
-
-  return prompts[templateId] || prompts[1];
 }
 
 function generateFallbackContent(template, data) {
