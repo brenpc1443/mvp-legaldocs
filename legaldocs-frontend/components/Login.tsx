@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { Scale, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
-export default function Login({ navigate }) {
+type LoginProps = {
+  navigate: (route: string, params?: any) => void;
+};
+
+export default function Login({ navigate }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (

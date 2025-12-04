@@ -1,11 +1,18 @@
 import React, { useState } from "react";
 import { Scale, Mail, Lock, User, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
-export default function Register({ navigate }) {
+type RegisterProps = {
+  navigate: (route: string, params?: any) => void;
+};
+
+export default function Register({ navigate }: RegisterProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div
+      className="min-h-screen bg-white"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
       <div className="grid lg:grid-cols-2 min-h-screen">
         {/* Left Side - Form */}
         <div className="flex items-center justify-center px-6 py-12">
@@ -31,7 +38,10 @@ export default function Register({ navigate }) {
                 className="w-12 h-12 rounded-[8px] flex items-center justify-center"
                 style={{ backgroundColor: "var(--color-navy)" }}
               >
-                <Scale className="w-7 h-7" style={{ color: "var(--color-gold)" }} />
+                <Scale
+                  className="w-7 h-7"
+                  style={{ color: "var(--color-gold)" }}
+                />
               </div>
               <span
                 style={{
@@ -65,7 +75,8 @@ export default function Register({ navigate }) {
                   lineHeight: "1.6",
                 }}
               >
-                Crea tu cuenta y empieza a generar documentos legales profesionales
+                Crea tu cuenta y empieza a generar documentos legales
+                profesionales
               </p>
             </div>
 
@@ -173,9 +184,15 @@ export default function Register({ navigate }) {
                     className="absolute right-4 top-1/2 transform -translate-y-1/2"
                   >
                     {showPassword ? (
-                      <EyeOff className="w-5 h-5" style={{ color: "var(--color-charcoal)" }} />
+                      <EyeOff
+                        className="w-5 h-5"
+                        style={{ color: "var(--color-charcoal)" }}
+                      />
                     ) : (
-                      <Eye className="w-5 h-5" style={{ color: "var(--color-charcoal)" }} />
+                      <Eye
+                        className="w-5 h-5"
+                        style={{ color: "var(--color-charcoal)" }}
+                      />
                     )}
                   </button>
                 </div>
@@ -208,11 +225,17 @@ export default function Register({ navigate }) {
                   }}
                 >
                   Acepto los{" "}
-                  <a href="#" style={{ color: "var(--color-gold)", fontWeight: "500" }}>
+                  <a
+                    href="#"
+                    style={{ color: "var(--color-gold)", fontWeight: "500" }}
+                  >
                     Términos de Servicio
                   </a>{" "}
                   y la{" "}
-                  <a href="#" style={{ color: "var(--color-gold)", fontWeight: "500" }}>
+                  <a
+                    href="#"
+                    style={{ color: "var(--color-gold)", fontWeight: "500" }}
+                  >
                     Política de Privacidad
                   </a>
                 </label>
@@ -346,7 +369,11 @@ export default function Register({ navigate }) {
                       strokeWidth="3"
                       viewBox="0 0 24 24"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                   </div>
                   <div>

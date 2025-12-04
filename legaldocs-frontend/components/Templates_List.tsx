@@ -1,13 +1,18 @@
+import { Briefcase, FileText, Scale, Search, Shield, Users } from "lucide-react";
 import React from "react";
-import { Scale, FileText, Shield, Briefcase, Users, ArrowRight, Search } from "lucide-react";
 
-export default function TemplatesList({ navigate }) {
+type TemplatesListProps = {
+  navigate: (route: string, params?: any) => void;
+};
+
+export default function TemplatesList({ navigate }: TemplatesListProps) {
   const templates = [
     {
       id: 1,
       name: "Contrato de Servicios Profesionales",
       category: "Contratos",
-      description: "Contrato estándar para prestación de servicios profesionales entre empresas",
+      description:
+        "Contrato estándar para prestación de servicios profesionales entre empresas",
       icon: Briefcase,
       color: "var(--color-navy)",
       popular: true,
@@ -17,7 +22,8 @@ export default function TemplatesList({ navigate }) {
       id: 2,
       name: "Acuerdo de Confidencialidad (NDA)",
       category: "NDAs",
-      description: "Acuerdo de no divulgación para proteger información confidencial",
+      description:
+        "Acuerdo de no divulgación para proteger información confidencial",
       icon: Shield,
       color: "#10b981",
       popular: true,
@@ -27,7 +33,8 @@ export default function TemplatesList({ navigate }) {
       id: 3,
       name: "Poder Notarial General",
       category: "Poderes",
-      description: "Poder notarial para representación legal en diversos actos jurídicos",
+      description:
+        "Poder notarial para representación legal en diversos actos jurídicos",
       icon: FileText,
       color: "var(--color-gold)",
       popular: false,
@@ -47,7 +54,8 @@ export default function TemplatesList({ navigate }) {
       id: 5,
       name: "Contrato de Arrendamiento",
       category: "Contratos",
-      description: "Contrato de alquiler de inmuebles para uso comercial o residencial",
+      description:
+        "Contrato de alquiler de inmuebles para uso comercial o residencial",
       icon: Briefcase,
       color: "#f59e0b",
       popular: false,
@@ -70,7 +78,10 @@ export default function TemplatesList({ navigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafbfc]" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div
+      className="min-h-screen bg-[#fafbfc]"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
       {/* Header */}
       <header
         className="border-b bg-white px-8 py-6"
@@ -85,7 +96,10 @@ export default function TemplatesList({ navigate }) {
               className="w-10 h-10 rounded-[8px] flex items-center justify-center"
               style={{ backgroundColor: "var(--color-navy)" }}
             >
-              <Scale className="w-6 h-6" style={{ color: "var(--color-gold)" }} />
+              <Scale
+                className="w-6 h-6"
+                style={{ color: "var(--color-gold)" }}
+              />
             </div>
             <span
               style={{
@@ -135,7 +149,8 @@ export default function TemplatesList({ navigate }) {
               lineHeight: "1.6",
             }}
           >
-            Explora nuestra colección de más de 100 plantillas legales profesionales
+            Explora nuestra colección de más de 100 plantillas legales
+            profesionales
           </p>
         </div>
 
@@ -224,7 +239,11 @@ export default function TemplatesList({ navigate }) {
                       backgroundColor: `${template.color}15`,
                     }}
                   >
-                    <Icon className="w-10 h-10" style={{ color: template.color }} strokeWidth={2} />
+                    <Icon
+                      className="w-10 h-10"
+                      style={{ color: template.color }}
+                      strokeWidth={2}
+                    />
                   </div>
                 </div>
 
@@ -253,7 +272,10 @@ export default function TemplatesList({ navigate }) {
                   {template.description}
                 </p>
 
-                <div className="flex items-center justify-between pt-5 border-t" style={{ borderColor: "#f3f4f6" }}>
+                <div
+                  className="flex items-center justify-between pt-5 border-t"
+                  style={{ borderColor: "#f3f4f6" }}
+                >
                   <span
                     style={{
                       fontSize: "13px",
@@ -274,7 +296,10 @@ export default function TemplatesList({ navigate }) {
                     }}
                   >
                     Usar plantilla
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" strokeWidth={2} />
+                    <ArrowRight
+                      className="w-4 h-4 transition-transform group-hover:translate-x-1"
+                      strokeWidth={2}
+                    />
                   </button>
                 </div>
               </div>

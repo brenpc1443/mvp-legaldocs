@@ -1,18 +1,34 @@
 import React from "react";
 import { Scale, Mail, ArrowLeft, Check } from "lucide-react";
 
-export default function ForgotPassword({ navigate }) {
+type ForgotPasswordProps = {
+  navigate: (route: string, params?: any) => void;
+};
+
+export default function ForgotPassword({ navigate }: ForgotPasswordProps) {
   return (
-    <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center px-6 py-12" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div
+      className="min-h-screen bg-[#fafbfc] flex items-center justify-center px-6 py-12"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-[8px] border p-8 md:p-10" style={{ borderColor: "#e5e7eb", boxShadow: "0 4px 12px 0 rgba(26, 35, 50, 0.12)" }}>
+        <div
+          className="bg-white rounded-[8px] border p-8 md:p-10"
+          style={{
+            borderColor: "#e5e7eb",
+            boxShadow: "0 4px 12px 0 rgba(26, 35, 50, 0.12)",
+          }}
+        >
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <div
               className="w-16 h-16 rounded-[8px] flex items-center justify-center"
               style={{ backgroundColor: "var(--color-navy)" }}
             >
-              <Scale className="w-9 h-9" style={{ color: "var(--color-gold)" }} />
+              <Scale
+                className="w-9 h-9"
+                style={{ color: "var(--color-gold)" }}
+              />
             </div>
           </div>
 
@@ -104,7 +120,11 @@ export default function ForgotPassword({ navigate }) {
               className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
               style={{ backgroundColor: "#3b82f6" }}
             >
-              <Check className="w-3 h-3" style={{ color: "white" }} strokeWidth={3} />
+              <Check
+                className="w-3 h-3"
+                style={{ color: "white" }}
+                strokeWidth={3}
+              />
             </div>
             <p
               style={{
@@ -114,7 +134,8 @@ export default function ForgotPassword({ navigate }) {
                 lineHeight: "1.5",
               }}
             >
-              Recibirás un correo con instrucciones para restablecer tu contraseña en los próximos minutos
+              Recibirás un correo con instrucciones para restablecer tu
+              contraseña en los próximos minutos
             </p>
           </div>
 

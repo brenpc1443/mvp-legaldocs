@@ -1,4 +1,3 @@
-// LegalDocs Backend - Express.js con Gemini API + Puppeteer
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -7,7 +6,6 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import puppeteer from "puppeteer";
-import mammoth from "mammoth";
 
 // Load environment variables
 dotenv.config();
@@ -33,10 +31,70 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // Create documents folder
 const docsFolder = path.join(__dirname, "generated_documents");
+const dbFolder = path.join(__dirname, "db");
+const usersFile = path.join(dbFolder, "users.json");
+const documentsFile = path.join(dbFolder, "documents.json");
+
 if (!fs.existsSync(docsFolder)) {
   fs.mkdirSync(docsFolder, { recursive: true });
-  console.log("📁 Carpeta de documentos creada:", docsFolder);
 }
+if (!fs.existsSync(dbFolder)) {
+  fs.mkdirSync(dbFolder, { recursive: true });
+}
+function initializeDB() {
+  if (!fs.existsSync(usersFile)) {
+    fs.writeFileSync(
+      usersFile,
+      JSON.stringify(
+        [
+          {
+            id: 1,
+            email: "brayan@example.com",
+            password: "123456",
+            name: "Brayan Paredes",
+          },
+          {
+            id: 2,
+            email: "test@example.com",
+            password: "test123",
+            name: "Usuario Test",
+          },
+        ],
+        null,
+        2
+      )
+    );
+  }
+  if (!fs.existsSync(documentsFile)) {
+    fs.writeFileSync(documentsFile, JSON.stringify([], null, 2));
+  }
+}
+
+function readUsers() {
+  return JSON.parse(fs.readFileSync(usersFile, "utf8"));
+}
+
+function readDocuments() {
+  return JSON.parse(fs.readFileSync(documentsFile, "utf8"));
+}
+
+function saveDocument(doc) {
+  const docs = readDocuments();
+  docs.push({
+    id: Date.now(),
+    ...doc,
+    createdAt: new Date().toISOString(),
+  });
+  fs.writeFileSync(documentsFile, JSON.stringify(docs, null, 2));
+  return docs[docs.length - 1];
+}
+
+function getUserDocuments(userId) {
+  const docs = readDocuments();
+  return docs.filter((doc) => doc.userId === userId);
+}
+
+initializeDB();
 
 // Template definitions
 const templates = [
@@ -101,48 +159,7 @@ const templates = [
   },
 ];
 
-// Clean Markdown
-function cleanMarkdown(text) {
-  const lines = text.split("\n");
-  let cleanLines = [];
-  let skipUntilMarked = false;
-
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-
-    if (
-      trimmed.match(/^(Como abogado|De acuerdo|Este documento)/i) &&
-      !trimmed.match(/^(CONSTE|CLÁUSULA|CONSIDERANDOS)/i)
-    ) {
-      skipUntilMarked = true;
-      return;
-    }
-
-    if (trimmed.match(/^(CONSTE|###|RECITALES|CLÁUSULA)/i)) {
-      skipUntilMarked = false;
-    }
-
-    if (!skipUntilMarked) {
-      cleanLines.push(line);
-    }
-  });
-
-  let cleaned = cleanLines.join("\n");
-  cleaned = cleaned.replace(/^-+$/gm, "");
-  cleaned = cleaned.replace(/^### /gm, "");
-  cleaned = cleaned.replace(/^## /gm, "");
-  cleaned = cleaned.replace(/^# /gm, "");
-  cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, "$1");
-  cleaned = cleaned.replace(/\[\*[^\*]*\*\]/g, "");
-  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
-
-  return cleaned;
-}
-
-// Convert text to HTML
-// Reemplaza la función textToHTML completa:
-
-// Reemplaza textToHTML con la versión original:
+const documentCache = new Map();
 
 function textToHTML(content, documentTitle) {
   const lines = content.split("\n");
@@ -252,10 +269,6 @@ function textToHTML(content, documentTitle) {
   return fullHTML;
 }
 
-const documentCache = new Map();
-
-// Y remove cleanMarkdownForPreview si la añadiste, o simplemente borrala
-
 function buildPrompt(templateId, data) {
   const prompts = {
     1: `Eres un abogado especialista en derecho comercial peruano. Genera ÚNICAMENTE un contrato de locación de servicios profesionales según la legislación peruana (Código Civil artículos 1764-1789, Decreto Supremo 003-97-TR). 
@@ -341,21 +354,6 @@ INSTRUCCIONES ESTRICTAS:
   };
 
   return prompts[templateId] || prompts[1];
-}
-
-function cleanMarkdownForPreview(text) {
-  // Convierte Markdown a formato visual de texto
-  return (
-    text
-      // Negritas: **texto** -> [NEGRITA] texto [/NEGRITA] (para mostrar visualmente)
-      .replace(/\*\*(.*?)\*\*/g, (match, content) => {
-        return content.toUpperCase(); // O usa otro formato visual
-      })
-      // Cursivas: *texto* -> _texto_
-      .replace(/\*(.*?)\*/g, "$1")
-      // Limpia markdowns sobrantes
-      .trim()
-  );
 }
 
 // Generate document with Gemini AI
@@ -594,7 +592,23 @@ async function createWordDocument(htmlContent, fileName) {
   }
 }
 
-// ROUTES
+app.post("/api/login", (req, res) => {
+  const { email, password } = req.body;
+  const users = readUsers();
+  const user = users.find((u) => u.email === email && u.password === password);
+
+  if (!user) {
+    return res.status(401).json({ error: "Credenciales inválidas" });
+  }
+
+  res.json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+  });
+});
+
+// Templates
 app.get("/api/templates", (req, res) => {
   res.json(templates);
 });
@@ -677,8 +691,15 @@ app.get("/api/download/:fileName", (req, res) => {
   res.download(filePath);
 });
 
+// Mis documentos
+app.get("/api/my-documents/:userId", (req, res) => {
+  const docs = getUserDocuments(parseInt(req.params.userId));
+  res.json(docs);
+});
+
+// Health
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "LegalDocs API running with Gemini" });
+  res.json({ status: "ok", message: "LegalDocs API running" });
 });
 
 app.listen(PORT, () => {

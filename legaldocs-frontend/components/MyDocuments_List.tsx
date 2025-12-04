@@ -1,7 +1,19 @@
 import React from "react";
-import { Scale, FileText, Download, Eye, MoreVertical, Search, Filter } from "lucide-react";
+import {
+  Scale,
+  FileText,
+  Download,
+  Eye,
+  MoreVertical,
+  Search,
+  Filter,
+} from "lucide-react";
 
-export default function MyDocumentsList({ navigate }) {
+type MyDocumentsListProps = {
+  navigate: (route: string, params?: any) => void;
+};
+
+export default function MyDocumentsList({ navigate }: MyDocumentsListProps) {
   const documents = [
     {
       id: 1,
@@ -54,7 +66,10 @@ export default function MyDocumentsList({ navigate }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#fafbfc]" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div
+      className="min-h-screen bg-[#fafbfc]"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
       {/* Header */}
       <header
         className="border-b bg-white px-8 py-6"
@@ -69,7 +84,10 @@ export default function MyDocumentsList({ navigate }) {
               className="w-10 h-10 rounded-[8px] flex items-center justify-center"
               style={{ backgroundColor: "var(--color-navy)" }}
             >
-              <Scale className="w-6 h-6" style={{ color: "var(--color-gold)" }} />
+              <Scale
+                className="w-6 h-6"
+                style={{ color: "var(--color-gold)" }}
+              />
             </div>
             <span
               style={{
@@ -167,7 +185,10 @@ export default function MyDocumentsList({ navigate }) {
           }}
         >
           {/* Table Header */}
-          <div className="px-6 py-5 border-b" style={{ borderColor: "#e5e7eb" }}>
+          <div
+            className="px-6 py-5 border-b"
+            style={{ borderColor: "#e5e7eb" }}
+          >
             <h2
               style={{
                 fontSize: "20px",
@@ -366,7 +387,10 @@ export default function MyDocumentsList({ navigate }) {
           </div>
 
           {/* Table Footer */}
-          <div className="px-6 py-4 border-t flex items-center justify-between" style={{ borderColor: "#e5e7eb" }}>
+          <div
+            className="px-6 py-4 border-t flex items-center justify-between"
+            style={{ borderColor: "#e5e7eb" }}
+          >
             <p
               style={{
                 fontSize: "13px",
