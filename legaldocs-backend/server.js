@@ -1,11 +1,10 @@
-import express from "express";
-import cors from "cors";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import puppeteer from "puppeteer";
+const express = require("express");
+const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
+const dotenv = require("dotenv");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const puppeteer = require("puppeteer");
 
 // Load environment variables
 dotenv.config();
@@ -790,16 +789,18 @@ app.get("*", (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🚀 LegalDocs Backend - Gemini + Puppeteer Edition`);
-  console.log(`   http://localhost:${PORT}`);
-  console.log(`\n📊 Modelo IA: Gemini Pro`);
-  console.log(
-    `✅ API Key configurada: ${process.env.GEMINI_API_KEY ? "Sí" : "No"}`
-  );
-  console.log(`\n📋 Endpoints disponibles:`);
-  console.log(`   GET  /api/templates`);
-  console.log(`   POST /api/generate-document`);
-  console.log(`   GET  /api/download/:fileName`);
-  console.log(`   GET  /api/health\n`);
-});
+// app.listen(PORT, () => {
+//   console.log(`\n🚀 LegalDocs Backend - Gemini + Puppeteer Edition`);
+//   console.log(`   http://localhost:${PORT}`);
+//   console.log(`\n📊 Modelo IA: Gemini Pro`);
+//   console.log(
+//     `✅ API Key configurada: ${process.env.GEMINI_API_KEY ? "Sí" : "No"}`
+//   );
+//   console.log(`\n📋 Endpoints disponibles:`);
+//   console.log(`   GET  /api/templates`);
+//   console.log(`   POST /api/generate-document`);
+//   console.log(`   GET  /api/download/:fileName`);
+//   console.log(`   GET  /api/health\n`);
+// });
+
+module.exports = app;
