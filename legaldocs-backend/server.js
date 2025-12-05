@@ -41,6 +41,7 @@ if (!fs.existsSync(docsFolder)) {
 if (!fs.existsSync(dbFolder)) {
   fs.mkdirSync(dbFolder, { recursive: true });
 }
+
 function initializeDB() {
   if (!fs.existsSync(usersFile)) {
     fs.writeFileSync(
@@ -80,13 +81,14 @@ function readDocuments() {
 
 function saveDocument(doc) {
   const docs = readDocuments();
-  docs.push({
-    id: Date.now(),
+  const newDoc = {
+    id: Date.now().toString(),
     ...doc,
     createdAt: new Date().toISOString(),
-  });
+  };
+  docs.push(newDoc);
   fs.writeFileSync(documentsFile, JSON.stringify(docs, null, 2));
-  return docs[docs.length - 1];
+  return newDoc;
 }
 
 function getUserDocuments(userId) {
@@ -173,16 +175,13 @@ function textToHTML(content, documentTitle) {
       return;
     }
 
-    // Convierte **texto** a <strong>texto</strong>
     trimmed = trimmed.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
-    // Títulos principales
     if (trimmed.match(/^(CONSIDERANDOS|CONSIDERANDO|RECITALES)/i)) {
       html += `<h2 style="text-align: center; font-weight: bold; margin-top: 20px; margin-bottom: 15px;">${trimmed}</h2>`;
       return;
     }
 
-    // Cláusulas
     if (
       trimmed.match(
         /^(CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
@@ -192,13 +191,11 @@ function textToHTML(content, documentTitle) {
       return;
     }
 
-    // Numerales
     if (trimmed.match(/^(\d+\.\d+\.?|[a-z]\))/)) {
       html += `<p style="margin-left: 40px; line-height: 1.6;">${trimmed}</p>`;
       return;
     }
 
-    // Texto normal
     html += `<p style="text-align: justify; line-height: 1.6;">${trimmed}</p>`;
   });
 
@@ -356,13 +353,10 @@ INSTRUCCIONES ESTRICTAS:
   return prompts[templateId] || prompts[1];
 }
 
-// Generate document with Gemini AI
 async function generateDocumentContent(template, formData) {
   try {
-    // Crea una clave única para este documento
     const cacheKey = `${template.id}_${JSON.stringify(formData)}`;
 
-    // Si ya existe en cache, devuelve el contenido cached
     if (documentCache.has(cacheKey)) {
       console.log("✅ Usando contenido en caché");
       return documentCache.get(cacheKey);
@@ -378,7 +372,6 @@ async function generateDocumentContent(template, formData) {
 
     console.log("✅ Contenido generado por IA (Gemini)");
 
-    // Limpia backticks de código si los hay
     content = content.replace(/^```[\w]*\n?/gm, "").replace(/\n?```$/gm, "");
     content = content.trim();
 
@@ -387,7 +380,6 @@ async function generateDocumentContent(template, formData) {
       content = generateFallbackContent(template, formData);
     }
 
-    // Cachea el contenido
     documentCache.set(cacheKey, content);
 
     return content;
@@ -396,7 +388,6 @@ async function generateDocumentContent(template, formData) {
     console.log("📝 Usando contenido fallback pre-escrito");
     const fallbackContent = generateFallbackContent(template, formData);
 
-    // También cachea el fallback
     const cacheKey = `${template.id}_${JSON.stringify(formData)}`;
     documentCache.set(cacheKey, fallbackContent);
 
@@ -538,19 +529,24 @@ D.S. 003-97-TR y normas laborales vigentes en Perú.`,
   return contents[template.id] || contents[1];
 }
 
-// Create PDF using Puppeteer
 async function createPdfDocument(htmlContent, fileName) {
   let browser;
   try {
+    const filePath = path.join(docsFolder, `${fileName}.pdf`);
+
+    console.log(`📝 Creando PDF: ${filePath}`);
+
     browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      headless: "new",
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      ],
     });
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-
-    const filePath = path.join(docsFolder, `${fileName}.pdf`);
 
     await page.pdf({
       path: filePath,
@@ -560,21 +556,34 @@ async function createPdfDocument(htmlContent, fileName) {
     });
 
     await browser.close();
-    console.log("✅ PDF creado correctamente con Puppeteer");
-    return filePath;
+
+    // Verificar que el archivo existe
+    if (fs.existsSync(filePath)) {
+      const stats = fs.statSync(filePath);
+      console.log(
+        `✅ PDF creado correctamente: ${filePath} (${stats.size} bytes)`
+      );
+      return filePath;
+    } else {
+      throw new Error(`PDF no se guardó en: ${filePath}`);
+    }
   } catch (error) {
-    if (browser) await browser.close();
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (e) {
+        console.error("Error cerrando browser:", e);
+      }
+    }
     console.error("❌ Error generando PDF:", error);
     throw error;
   }
 }
 
-// Create DOCX from HTML
 async function createWordDocument(htmlContent, fileName) {
   try {
     const filePath = path.join(docsFolder, `${fileName}.docx`);
 
-    // Eliminar etiquetas HTML y limpiar contenido
     const wordContent = htmlContent
       .replace(/<[^>]*>/g, "\n")
       .replace(/&nbsp;/g, " ")
@@ -608,7 +617,6 @@ app.post("/api/login", (req, res) => {
   });
 });
 
-// Templates
 app.get("/api/templates", (req, res) => {
   res.json(templates);
 });
@@ -619,54 +627,89 @@ app.get("/api/templates/:id", (req, res) => {
   res.json(template);
 });
 
-// Añade esta función para extraer solo el texto del HTML
 function extractTextFromHTML(htmlContent) {
-  // Elimina las etiquetas style
   let text = htmlContent.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
-  // Elimina todas las etiquetas HTML
   text = text.replace(/<[^>]*>/g, "");
-  // Limpia espacios múltiples
   text = text.replace(/\n\n+/g, "\n\n").trim();
   return text;
 }
 
-// Modifica la ruta existente /api/generate-document así:
 app.post("/api/generate-document", async (req, res) => {
   try {
-    const { templateId, formData, format } = req.body;
+    const { templateId, formData, format, userId } = req.body;
+
+    console.log(`\n${"=".repeat(60)}`);
+    console.log(`📄 GENERANDO NUEVO DOCUMENTO`);
+    console.log(`${"=".repeat(60)}`);
 
     const template = templates.find((t) => t.id === parseInt(templateId));
     if (!template) return res.status(404).json({ error: "Template not found" });
 
-    console.log(`\n📄 Generando documento: ${template.name}`);
-    console.log(`📋 Formato: ${format.toUpperCase()}`);
+    console.log(`📋 Plantilla: ${template.name}`);
+    console.log(`📊 Formato: ${format.toUpperCase()}`);
+    console.log(`👤 Usuario ID: ${userId || "N/A"}`);
 
     const content = await generateDocumentContent(template, formData);
     const htmlContent = textToHTML(content, template.name);
 
-    // Si es preview, retorna solo el texto limpio
     if (format === "preview") {
+      console.log(`✅ Retornando preview (sin guardar)`);
       const plainText = extractTextFromHTML(content);
       return res.send(plainText);
     }
 
     const fileName = `${template.name.replace(/\s+/g, "_")}_${Date.now()}`;
     let filePath;
+    let fileExtension;
+
+    console.log(`\n📝 Iniciando guardado del documento...`);
+    console.log(`📁 Nombre base: ${fileName}`);
 
     if (format === "pdf") {
+      console.log(`🔄 Generando PDF con Puppeteer...`);
       filePath = await createPdfDocument(htmlContent, fileName);
+      fileExtension = "pdf";
     } else {
+      console.log(`🔄 Generando DOCX...`);
       filePath = await createWordDocument(htmlContent, fileName);
+      fileExtension = "docx";
     }
 
-    console.log(`✅ Documento listo para descargar\n`);
+    const finalFileName = `${fileName}.${fileExtension}`;
+    console.log(`\n✅ Archivo guardado exitosamente`);
+    console.log(`📂 Ruta: ${filePath}`);
+    console.log(`💾 Tamaño: ${fs.statSync(filePath).size} bytes`);
+    console.log(`📄 Nombre final: ${finalFileName}`);
 
-    res.download(
-      filePath,
-      `${template.name}.${format === "pdf" ? "pdf" : "docx"}`
-    );
+    // Guardar información del documento en la BD
+    if (userId) {
+      console.log(`\n📚 Registrando en base de datos...`);
+      const doc = saveDocument({
+        userId: parseInt(userId),
+        templateId: template.id,
+        templateName: template.name,
+        fileName: finalFileName,
+        fileSize: fs.statSync(filePath).size,
+        format: format,
+        filePath: finalFileName,
+      });
+      console.log(`✅ Documento registrado con ID: ${doc.id}`);
+    }
+
+    console.log(`${"=".repeat(60)}\n`);
+
+    // Enviar el archivo Y la información del documento
+    res.json({
+      success: true,
+      fileName: finalFileName,
+      filePath: finalFileName,
+      size: fs.statSync(filePath).size,
+      message: "Documento generado exitosamente. Procede a descargarlo.",
+    });
   } catch (error) {
-    console.error("❌ Error:", error.message);
+    console.error(`\n❌ ERROR GENERANDO DOCUMENTO:`);
+    console.error(`   ${error.message}`);
+    console.error(`${"=".repeat(60)}\n`);
     res.status(500).json({
       error: "Error generating document :'v",
       details: error.message,
@@ -684,20 +727,48 @@ app.get("/api/documents", (req, res) => {
 });
 
 app.get("/api/download/:fileName", (req, res) => {
-  const filePath = path.join(docsFolder, req.params.fileName);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" });
+  try {
+    const fileName = req.params.fileName;
+    const filePath = path.join(docsFolder, fileName);
+
+    console.log(`\n📥 Solicitud de descarga recibida`);
+    console.log(`📄 Nombre del archivo: ${fileName}`);
+    console.log(`📂 Ruta completa: ${filePath}`);
+    console.log(`📂 Carpeta de documentos: ${docsFolder}`);
+
+    // Listar archivos disponibles
+    const availableFiles = fs.readdirSync(docsFolder);
+    console.log(`📋 Archivos disponibles: ${availableFiles.join(", ")}`);
+
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ Archivo no encontrado: ${filePath}`);
+      console.error(`❌ Se esperaba encontrar el archivo en: ${filePath}`);
+      return res.status(404).json({
+        error: "Archivo no encontrado",
+        requestedFile: fileName,
+        searchedPath: filePath,
+        availableFiles: availableFiles,
+      });
+    }
+
+    const stats = fs.statSync(filePath);
+    console.log(`✅ Archivo encontrado. Tamaño: ${stats.size} bytes`);
+
+    res.download(filePath);
+  } catch (error) {
+    console.error("❌ Error en descarga:", error);
+    res.status(500).json({
+      error: "Error al descargar archivo",
+      details: error.message,
+    });
   }
-  res.download(filePath);
 });
 
-// Mis documentos
 app.get("/api/my-documents/:userId", (req, res) => {
   const docs = getUserDocuments(parseInt(req.params.userId));
   res.json(docs);
 });
 
-// Health
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "LegalDocs API running" });
 });
@@ -712,5 +783,6 @@ app.listen(PORT, () => {
   console.log(`\n📋 Endpoints disponibles:`);
   console.log(`   GET  /api/templates`);
   console.log(`   POST /api/generate-document`);
+  console.log(`   GET  /api/download/:fileName`);
   console.log(`   GET  /api/health\n`);
 });

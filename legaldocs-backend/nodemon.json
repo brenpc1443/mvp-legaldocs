@@ -1,0 +1,14 @@
+{
+  "watch": ["server.js"],
+  "ext": "js",
+  "ignore": [
+    "generated_documents/",
+    "db/",
+    "node_modules/",
+    ".git/",
+    "*.pdf",
+    "*.docx"
+  ],
+  "exec": "node server.js",
+  "delay": 500
+}

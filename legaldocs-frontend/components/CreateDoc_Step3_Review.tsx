@@ -7,7 +7,7 @@ import {
   Check,
   Loader,
 } from "lucide-react";
-import { NavigateFunction  } from "../src/types";
+import { NavigateFunction } from "../src/types";
 
 const API_URL =
   (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000";
@@ -45,7 +45,7 @@ interface SavedDocument {
 }
 
 interface CreateDocStep3Props {
-  navigate: NavigateFunction ;
+  navigate: NavigateFunction;
   formData: FormDataType;
   template: TemplateType;
   setShowSuccessModal: (show: boolean) => void;
@@ -148,17 +148,33 @@ export default function CreateDocStep3({
           templateId: template.id,
           formData,
           format,
+          userId: currentUser.id,
         }),
       });
 
       if (!response.ok) throw new Error("Error generating document");
 
-      const blob = await response.blob();
+      // Obtener la información del documento
+      const data = await response.json();
+      const fileName = data.fileName;
+      const fileSize = data.size;
+
+      console.log("✅ Documento generado:", fileName);
+
+      // Ahora descargar el archivo usando el nombre exacto
+      const downloadResponse = await fetch(
+        `${API_URL}/api/download/${encodeURIComponent(fileName)}`
+      );
+
+      if (!downloadResponse.ok) {
+        throw new Error("Error descargando el archivo generado");
+      }
+
+      const blob = await downloadResponse.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const fileName = `${template.name}.${format === "pdf" ? "pdf" : "docx"}`;
-      a.download = fileName;
+      a.download = `${template.name}.${format === "pdf" ? "pdf" : "docx"}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -170,13 +186,11 @@ export default function CreateDocStep3({
         userId: currentUser.id,
         templateId: template.id,
         templateName: template.name,
-        fileName: fileName,
-        fileSize: blob.size,
+        fileName: `${template.name}.${format === "pdf" ? "pdf" : "docx"}`,
+        fileSize: fileSize,
         createdAt: new Date().toISOString(),
         format: format,
-        filePath: `${template.name.replace(/\s+/g, "_")}_${Date.now()}.${
-          format === "pdf" ? "pdf" : "docx"
-        }`,
+        filePath: fileName,
       };
 
       onDocumentSaved(savedDoc);

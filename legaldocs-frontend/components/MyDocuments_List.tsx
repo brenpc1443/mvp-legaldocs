@@ -8,8 +8,11 @@ import {
   Filter,
   Trash2,
   AlertCircle,
+  Loader,
 } from "lucide-react";
 import { NavigateFunction, SavedDocument } from "../src/types";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 interface MyDocumentsListProps {
   navigate: NavigateFunction;
@@ -27,6 +30,7 @@ export default function MyDocumentsList({
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
     null
   );
+  const [error, setError] = React.useState<string | null>(null);
 
   const filteredDocuments = documents.filter((doc) =>
     doc.templateName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -47,31 +51,53 @@ export default function MyDocumentsList({
     return (bytes / (1024 * 1024)).toFixed(2) + " MB";
   };
 
-  const handleDownload = (doc: SavedDocument) => {
+  const handleDownload = async (doc: SavedDocument) => {
     setDownloadingId(doc.id);
+    setError(null);
 
     try {
-      // Crear un blob simulado con datos del documento
-      const content = `${doc.templateName}\n\nGenerado: ${formatDate(
-        doc.createdAt
-      )}\nFormato: ${doc.format.toUpperCase()}\n\n---\n\nEste es un archivo de documento legal guardado en LegalDocs Perú.\n\nNota: Los archivos se guardan localmente. Para acceder a ellos nuevamente,\ninicia sesión con la misma cuenta.`;
+      // El filePath contiene el nombre exacto del archivo
+      const fileName = doc.filePath;
 
-      const blob = new Blob([content], { type: "text/plain" });
+      if (!fileName) {
+        throw new Error("No se pudo determinar el nombre del archivo");
+      }
+
+      console.log(`📥 Descargando: ${fileName}`);
+
+      // Hacer request al backend para descargar el archivo
+      const response = await fetch(
+        `${API_URL}/api/download/${encodeURIComponent(fileName)}`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Error descargando archivo: ${response.status} ${response.statusText}`
+        );
+      }
+
+      // Obtener el blob del archivo
+      const blob = await response.blob();
+
+      if (blob.size === 0) {
+        throw new Error("El archivo está vacío");
+      }
+
+      // Crear URL y descargar
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = doc.fileName;
+      a.download = `${doc.templateName}.${doc.format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
-      // Simular descarga completada
-      setTimeout(() => {
-        setDownloadingId(null);
-      }, 500);
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Error desconocido";
       console.error("Error descargando documento:", error);
+      setError(`No se pudo descargar el documento: ${errorMessage}`);
+    } finally {
       setDownloadingId(null);
     }
   };
@@ -157,6 +183,31 @@ export default function MyDocumentsList({
           </p>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div
+            className="mb-8 p-4 rounded-[8px] flex items-start gap-3"
+            style={{
+              backgroundColor: "#fee2e2",
+              border: "1px solid #fecaca",
+            }}
+          >
+            <AlertCircle
+              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              style={{ color: "#dc2626" }}
+            />
+            <p
+              style={{
+                fontSize: "14px",
+                fontWeight: "400",
+                color: "#991b1b",
+              }}
+            >
+              {error}
+            </p>
+          </div>
+        )}
+
         {/* Info Banner */}
         <div
           className="mb-8 p-4 rounded-[8px] flex items-start gap-3"
@@ -176,9 +227,8 @@ export default function MyDocumentsList({
               color: "#1e40af",
             }}
           >
-            💾 Los documentos se guardan localmente en tu navegador. Para
-            acceder a ellos, inicia sesión con la misma cuenta. Si limpias el
-            historial del navegador, los documentos se perderán.
+            💾 Los documentos se descargan desde el servidor. Verifica que el
+            backend esté en ejecución en {API_URL}
           </p>
         </div>
 
@@ -436,16 +486,20 @@ export default function MyDocumentsList({
                               className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7] disabled:opacity-50"
                               title="Descargar documento"
                             >
-                              <Download
-                                className="w-5 h-5"
-                                style={{
-                                  color:
-                                    downloadingId === doc.id
-                                      ? "#9ca3af"
-                                      : "var(--color-charcoal)",
-                                }}
-                                strokeWidth={2}
-                              />
+                              {downloadingId === doc.id ? (
+                                <Loader
+                                  className="w-5 h-5 animate-spin"
+                                  style={{ color: "var(--color-gold)" }}
+                                />
+                              ) : (
+                                <Download
+                                  className="w-5 h-5"
+                                  style={{
+                                    color: "var(--color-charcoal)",
+                                  }}
+                                  strokeWidth={2}
+                                />
+                              )}
                             </button>
                             <button
                               id={`btn_delete_${doc.id}`}
