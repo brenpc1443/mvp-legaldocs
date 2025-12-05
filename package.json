@@ -1,0 +1,9 @@
+{
+  "name": "legaldocs-saas",
+  "version": "1.0.0",
+  "description": "LegalDocs - Plataforma SaaS para documentos legales",
+  "workspaces": [
+    "legaldocs-backend",
+    "legaldocs-frontend"
+  ]
+}

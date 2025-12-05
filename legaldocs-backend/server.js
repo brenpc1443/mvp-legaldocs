@@ -773,6 +773,21 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "LegalDocs API running" });
 });
 
+// Servir frontend estático en producción
+if (process.env.NODE_ENV === "production") {
+  import("path").then(({ resolve }) => {
+    import("url").then(({ fileURLToPath }) => {
+      const __dirname = resolve(fileURLToPath(import.meta.url), "..");
+      app.use(express.static(resolve(__dirname, "../legaldocs-frontend/dist")));
+      app.get("*", (req, res) => {
+        res.sendFile(
+          resolve(__dirname, "../legaldocs-frontend/dist/index.html")
+        );
+      });
+    });
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`\n🚀 LegalDocs Backend - Gemini + Puppeteer Edition`);
   console.log(`   http://localhost:${PORT}`);
