@@ -13,7 +13,6 @@ import ForgotPassword from "../components/ForgotPassword";
 import {
   NavigateFunction,
   FrameType,
-  NavigationData,
   User,
   SavedDocument,
   FormData,

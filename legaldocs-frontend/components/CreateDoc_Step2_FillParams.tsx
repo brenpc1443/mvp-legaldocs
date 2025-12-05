@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Scale, ArrowLeft, ArrowRight, Eye } from "lucide-react";
 import { NavigateFunction } from "@/types";
 

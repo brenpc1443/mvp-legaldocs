@@ -1,4 +1,3 @@
-import React from "react";
 import { Scale, Mail, ArrowLeft, Check } from "lucide-react";
 import { NavigateFunction } from "@/types";
 

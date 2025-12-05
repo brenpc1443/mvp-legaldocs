@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Scale,
   Home,
@@ -11,10 +10,8 @@ import {
   User,
   Download,
   Eye,
-  MoreVertical,
   Clock,
   CheckCircle,
-  TrendingUp,
   LogOut,
 } from "lucide-react";
 import {

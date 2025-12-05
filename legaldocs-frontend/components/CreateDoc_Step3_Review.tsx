@@ -1,12 +1,5 @@
-import React, { useState, useEffect } from "react";
-import {
-  Scale,
-  ArrowLeft,
-  Download,
-  CheckCircle,
-  Check,
-  Loader,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Scale, Download, CheckCircle, Check, Loader } from "lucide-react";
 import { NavigateFunction } from "../src/types";
 
 const API_URL =
@@ -56,7 +49,7 @@ interface CreateDocStep3Props {
 }
 
 export default function CreateDocStep3({
-  navigate,
+  // navigate,
   formData,
   template,
   setShowSuccessModal,
@@ -69,9 +62,9 @@ export default function CreateDocStep3({
   const [fullContent, setFullContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingComplete, setStreamingComplete] = useState(false);
-  const [generatedFileName, setGeneratedFileName] = useState<string | null>(
-    null
-  );
+  // const [generatedFileName, setGeneratedFileName] = useState<string | null>(
+  //   null
+  // );
 
   if (!formData || !template) {
     formData = {
@@ -194,7 +187,7 @@ export default function CreateDocStep3({
       };
 
       onDocumentSaved(savedDoc);
-      setGeneratedFileName(fileName);
+      // setGeneratedFileName(fileName);
       setShowSuccessModal(true);
     } catch (error) {
       console.error("Error:", error);

@@ -1,14 +1,23 @@
-import React from "react";
 import { Scale, ArrowLeft, Check, FileText } from "lucide-react";
+import { NavigateFunction, Template } from "@/types";
 
-export default function TemplateDetail({ navigate, template }) {
+type TemplateDetailProps = {
+  navigate: NavigateFunction;
+  template: Template;
+};
+
+export default function TemplateDetail({
+  navigate,
+  template,
+}: TemplateDetailProps) {
   if (!template) {
     // Default template if none selected
     template = {
       id: 1,
       name: "Contrato de Servicios Profesionales",
       category: "Contratos",
-      description: "Contrato estándar para prestación de servicios profesionales entre empresas",
+      description:
+        "Contrato estándar para prestación de servicios profesionales entre empresas",
       color: "var(--color-navy)",
       fields: 8,
     };
@@ -34,7 +43,10 @@ export default function TemplateDetail({ navigate, template }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#fafbfc]" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div
+      className="min-h-screen bg-[#fafbfc]"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
       {/* Header */}
       <header
         className="border-b bg-white px-8 py-6"
@@ -49,7 +61,10 @@ export default function TemplateDetail({ navigate, template }) {
               className="w-10 h-10 rounded-[8px] flex items-center justify-center"
               style={{ backgroundColor: "var(--color-navy)" }}
             >
-              <Scale className="w-6 h-6" style={{ color: "var(--color-gold)" }} />
+              <Scale
+                className="w-6 h-6"
+                style={{ color: "var(--color-gold)" }}
+              />
             </div>
             <span
               style={{
@@ -203,7 +218,11 @@ export default function TemplateDetail({ navigate, template }) {
                       className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                       style={{ backgroundColor: "var(--color-gold)" }}
                     >
-                      <Check className="w-4 h-4" style={{ color: "var(--color-navy)" }} strokeWidth={3} />
+                      <Check
+                        className="w-4 h-4"
+                        style={{ color: "var(--color-navy)" }}
+                        strokeWidth={3}
+                      />
                     </div>
                     <span
                       style={{
@@ -239,7 +258,11 @@ export default function TemplateDetail({ navigate, template }) {
                     className="flex items-center gap-3 p-4 rounded-[8px] bg-white border"
                     style={{ borderColor: "#e5e7eb" }}
                   >
-                    <FileText className="w-5 h-5 flex-shrink-0" style={{ color: "var(--color-gold)" }} strokeWidth={2} />
+                    <FileText
+                      className="w-5 h-5 flex-shrink-0"
+                      style={{ color: "var(--color-gold)" }}
+                      strokeWidth={2}
+                    />
                     <span
                       style={{
                         fontSize: "14px",
@@ -270,7 +293,11 @@ export default function TemplateDetail({ navigate, template }) {
                   backgroundColor: `${template.color}15`,
                 }}
               >
-                <FileText className="w-8 h-8" style={{ color: template.color }} strokeWidth={2} />
+                <FileText
+                  className="w-8 h-8"
+                  style={{ color: template.color }}
+                  strokeWidth={2}
+                />
               </div>
 
               <h3
@@ -285,27 +312,79 @@ export default function TemplateDetail({ navigate, template }) {
               </h3>
 
               <div className="mb-8 space-y-3">
-                <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: "#f3f4f6" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "500", color: "#6b7280" }}>Categoría</span>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--color-navy)" }}>
+                <div
+                  className="flex items-center justify-between py-3 border-b"
+                  style={{ borderColor: "#f3f4f6" }}
+                >
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "#6b7280",
+                    }}
+                  >
+                    Categoría
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "var(--color-navy)",
+                    }}
+                  >
                     {template.category}
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: "#f3f4f6" }}>
-                  <span style={{ fontSize: "14px", fontWeight: "500", color: "#6b7280" }}>Campos</span>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--color-navy)" }}>
+                <div
+                  className="flex items-center justify-between py-3 border-b"
+                  style={{ borderColor: "#f3f4f6" }}
+                >
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "#6b7280",
+                    }}
+                  >
+                    Campos
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "var(--color-navy)",
+                    }}
+                  >
                     {template.fields}
                   </span>
                 </div>
                 <div className="flex items-center justify-between py-3">
-                  <span style={{ fontSize: "14px", fontWeight: "500", color: "#6b7280" }}>Tiempo estimado</span>
-                  <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--color-navy)" }}>5-10 min</span>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "#6b7280",
+                    }}
+                  >
+                    Tiempo estimado
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "var(--color-navy)",
+                    }}
+                  >
+                    5-10 min
+                  </span>
                 </div>
               </div>
 
               <button
                 id="btn_use_this_template"
-                onClick={() => navigate("CreateDoc_Step2_FillParams", { template })}
+                onClick={() =>
+                  navigate("CreateDoc_Step2_FillParams", { template })
+                }
                 className="w-full px-6 py-4 rounded-[8px] transition-all hover:shadow-lg mb-4"
                 style={{
                   backgroundColor: "var(--color-navy)",

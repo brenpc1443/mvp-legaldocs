@@ -3,7 +3,6 @@ import {
   Scale,
   FileText,
   Download,
-  MoreVertical,
   Search,
   Filter,
   Trash2,

@@ -1,4 +1,3 @@
-import React from "react";
 import { CheckCircle, Download, FolderOpen, X } from "lucide-react";
 import { NavigateFunction } from "@/types";
 
@@ -17,7 +16,7 @@ interface GeneratedSuccessModalProps {
 export default function GeneratedSuccessModal({
   navigate,
   setShowSuccessModal,
-  user,
+  // user,
 }: GeneratedSuccessModalProps) {
   return (
     <div
