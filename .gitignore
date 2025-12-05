@@ -50,4 +50,4 @@ generated_documents/
 # Temporary files
 *.tmp
 *.temp
-.cache/
+.cache/legaldocs-frontend/.env*
