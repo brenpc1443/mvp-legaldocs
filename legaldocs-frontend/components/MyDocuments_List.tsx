@@ -3,25 +3,13 @@ import {
   Scale,
   FileText,
   Download,
-  Eye,
   MoreVertical,
   Search,
   Filter,
   Trash2,
+  AlertCircle,
 } from "lucide-react";
-import { NavigateFunction } from "../src/types";
-
-interface SavedDocument {
-  id: string;
-  userId: number;
-  templateId: number;
-  templateName: string;
-  fileName: string;
-  fileSize?: number;
-  createdAt: string;
-  filePath?: string;
-  format: "pdf" | "docx";
-}
+import { NavigateFunction, SavedDocument } from "../src/types";
 
 interface MyDocumentsListProps {
   navigate: NavigateFunction;
@@ -35,6 +23,10 @@ export default function MyDocumentsList({
   onDeleteDocument,
 }: MyDocumentsListProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
+    null
+  );
 
   const filteredDocuments = documents.filter((doc) =>
     doc.templateName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -53,6 +45,40 @@ export default function MyDocumentsList({
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
     return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  };
+
+  const handleDownload = (doc: SavedDocument) => {
+    setDownloadingId(doc.id);
+
+    try {
+      // Crear un blob simulado con datos del documento
+      const content = `${doc.templateName}\n\nGenerado: ${formatDate(
+        doc.createdAt
+      )}\nFormato: ${doc.format.toUpperCase()}\n\n---\n\nEste es un archivo de documento legal guardado en LegalDocs Perú.\n\nNota: Los archivos se guardan localmente. Para acceder a ellos nuevamente,\ninicia sesión con la misma cuenta.`;
+
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Simular descarga completada
+      setTimeout(() => {
+        setDownloadingId(null);
+      }, 500);
+    } catch (error) {
+      console.error("Error descargando documento:", error);
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDelete = (docId: string) => {
+    onDeleteDocument(docId);
+    setDeleteConfirmId(null);
   };
 
   return (
@@ -128,6 +154,31 @@ export default function MyDocumentsList({
             }}
           >
             Administra y descarga todos tus documentos legales generados
+          </p>
+        </div>
+
+        {/* Info Banner */}
+        <div
+          className="mb-8 p-4 rounded-[8px] flex items-start gap-3"
+          style={{
+            backgroundColor: "#eff6ff",
+            border: "1px solid #bfdbfe",
+          }}
+        >
+          <AlertCircle
+            className="w-5 h-5 flex-shrink-0 mt-0.5"
+            style={{ color: "#3b82f6" }}
+          />
+          <p
+            style={{
+              fontSize: "14px",
+              fontWeight: "400",
+              color: "#1e40af",
+            }}
+          >
+            💾 Los documentos se guardan localmente en tu navegador. Para
+            acceder a ellos, inicia sesión con la misma cuenta. Si limpias el
+            historial del navegador, los documentos se perderán.
           </p>
         </div>
 
@@ -379,30 +430,26 @@ export default function MyDocumentsList({
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
                             <button
-                              id={`btn_view_${doc.id}`}
-                              className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
-                              title="Ver documento"
-                            >
-                              <Eye
-                                className="w-5 h-5"
-                                style={{ color: "var(--color-charcoal)" }}
-                                strokeWidth={2}
-                              />
-                            </button>
-                            <button
                               id={`btn_download_${doc.id}`}
-                              className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
-                              title="Descargar"
+                              onClick={() => handleDownload(doc)}
+                              disabled={downloadingId === doc.id}
+                              className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7] disabled:opacity-50"
+                              title="Descargar documento"
                             >
                               <Download
                                 className="w-5 h-5"
-                                style={{ color: "var(--color-charcoal)" }}
+                                style={{
+                                  color:
+                                    downloadingId === doc.id
+                                      ? "#9ca3af"
+                                      : "var(--color-charcoal)",
+                                }}
                                 strokeWidth={2}
                               />
                             </button>
                             <button
                               id={`btn_delete_${doc.id}`}
-                              onClick={() => onDeleteDocument(doc.id)}
+                              onClick={() => setDeleteConfirmId(doc.id)}
                               className="p-2 rounded-[8px] transition-colors hover:bg-red-50"
                               title="Eliminar documento"
                             >
@@ -419,6 +466,67 @@ export default function MyDocumentsList({
                   </tbody>
                 </table>
               </div>
+
+              {/* Delete Confirmation Modal */}
+              {deleteConfirmId && (
+                <div
+                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                  onClick={() => setDeleteConfirmId(null)}
+                >
+                  <div
+                    className="bg-white rounded-[8px] p-8 max-w-md w-full mx-4"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: "600",
+                        color: "var(--color-navy)",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      Eliminar documento
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "400",
+                        color: "var(--color-charcoal)",
+                        marginBottom: "24px",
+                      }}
+                    >
+                      ¿Estás seguro de que deseas eliminar este documento? Esta
+                      acción no se puede deshacer.
+                    </p>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => setDeleteConfirmId(null)}
+                        className="flex-1 px-4 py-3 rounded-[8px] border transition-all hover:bg-[#f5f6f7]"
+                        style={{
+                          borderColor: "#e5e7eb",
+                          color: "var(--color-charcoal)",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(deleteConfirmId)}
+                        className="flex-1 px-4 py-3 rounded-[8px] transition-all hover:opacity-90"
+                        style={{
+                          backgroundColor: "#dc2626",
+                          color: "var(--color-white)",
+                          fontSize: "15px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Table Footer */}
               <div

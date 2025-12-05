@@ -10,86 +10,15 @@ import MyDocumentsList from "../components/MyDocuments_List";
 import Login from "../components/Login";
 import Register from "../components/Register";
 import ForgotPassword from "../components/ForgotPassword";
-import { NavigateFunction, NavigationData } from "../src/types";
-
-// Types
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-}
-
-export interface Clauses {
-  confidentiality?: boolean;
-  termination?: boolean;
-  arbitration?: boolean;
-  warranty?: boolean;
-  [key: string]: any;
-}
-
-export interface FormDataType {
-  clientName?: string;
-  documentType?: string;
-  startDate?: string;
-  ruc?: string;
-  endDate?: string;
-  amount?: string;
-  paymentTerms?: string;
-  disclosingParty?: string;
-  receivingParty?: string;
-  duration?: string;
-  jurisdiction?: string;
-  principalName?: string;
-  principalDNI?: string;
-  attorneyName?: string;
-  attorneyDNI?: string;
-  powers?: string;
-  location?: string;
-  employerName?: string;
-  employeeName?: string;
-  position?: string;
-  salary?: string;
-  workingHours?: string;
-  benefits?: string;
-  clauses?: Clauses;
-  [key: string]: any;
-}
-
-export interface Template {
-  id: number;
-  name: string;
-  category?: string;
-  description?: string;
-  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  color?: string;
-  popular?: boolean;
-  fields?: number;
-  [key: string]: any;
-}
-
-export interface SavedDocument {
-  id: string;
-  userId: number;
-  templateId: number;
-  templateName: string;
-  fileName: string;
-  fileSize?: number;
-  createdAt: string;
-  filePath?: string;
-  format: "pdf" | "docx";
-}
-
-type FrameType =
-  | "Login"
-  | "Register"
-  | "ForgotPassword"
-  | "Dashboard_Home"
-  | "Templates_List"
-  | "Template_Detail"
-  | "CreateDoc_Step1_SelectTemplate"
-  | "CreateDoc_Step2_FillParams"
-  | "CreateDoc_Step3_Review"
-  | "MyDocuments_List";
+import {
+  NavigateFunction,
+  FrameType,
+  NavigationData,
+  User,
+  SavedDocument,
+  FormData,
+  Template,
+} from "./types";
 
 export default function App() {
   const [currentFrame, setCurrentFrame] = useState<FrameType>("Login");
@@ -99,7 +28,7 @@ export default function App() {
     id: 0,
     name: "",
   });
-  const [formData, setFormData] = useState<FormDataType>({
+  const [formData, setFormData] = useState<FormData>({
     clientName: "",
     documentType: "",
     startDate: "",
@@ -129,10 +58,7 @@ export default function App() {
     localStorage.setItem("documents", JSON.stringify(savedDocuments));
   }, [savedDocuments]);
 
-  const navigate: NavigateFunction = (
-    frame: FrameType,
-    data: NavigationData | null = null
-  ) => {
+  const navigate: NavigateFunction = (frame, data = null) => {
     setCurrentFrame(frame);
     if (data) {
       if (data.template) setSelectedTemplate(data.template);
@@ -168,18 +94,14 @@ export default function App() {
 
   const frames: Record<FrameType, React.ReactNode> = {
     Login: <Login navigate={navigate} onLogin={handleLogin} />,
-    Register: (
-      <Register
-        navigate={navigate}
-        // onRegister={handleLogin}
-      />
-    ),
+    Register: <Register navigate={navigate} />,
     ForgotPassword: <ForgotPassword navigate={navigate} />,
     Dashboard_Home: (
       <DashboardHome
         navigate={navigate}
         user={currentUser}
         onLogout={handleLogout}
+        documents={getUserDocuments()}
       />
     ),
     Templates_List: <TemplatesList navigate={navigate} />,
@@ -193,7 +115,7 @@ export default function App() {
     CreateDoc_Step3_Review: (
       <CreateDocStep3
         navigate={navigate}
-        formData={formData as any}
+        formData={formData}
         template={selectedTemplate}
         setShowSuccessModal={setShowSuccessModal}
         loading={loading}

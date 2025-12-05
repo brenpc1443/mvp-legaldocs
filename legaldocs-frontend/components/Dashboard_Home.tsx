@@ -17,42 +17,53 @@ import {
   TrendingUp,
   LogOut,
 } from "lucide-react";
-import { NavigateFunction } from "@/types";
+import {
+  NavigateFunction,
+  User as userType,
+  SavedDocument,
+} from "../src/types";
 
 interface DashboardHomeProps {
   navigate: NavigateFunction;
-  user: { id: number; name: string; email: string } | null;
+  user: userType | null;
   onLogout: () => void;
+  documents?: SavedDocument[];
 }
 
 export default function DashboardHome({
   navigate,
   user,
   onLogout,
+  documents = [],
 }: DashboardHomeProps) {
-  const recentDocuments = [
-    {
-      id: 1,
-      name: "Contrato de Servicios Profesionales",
-      type: "Contrato",
-      date: "28 Nov 2025",
-      status: "Completado",
-    },
-    {
-      id: 2,
-      name: "Poder Notarial General",
-      type: "Poder",
-      date: "27 Nov 2025",
-      status: "En revisión",
-    },
-    {
-      id: 3,
-      name: "Acuerdo de Confidencialidad (NDA)",
-      type: "NDA",
-      date: "26 Nov 2025",
-      status: "Completado",
-    },
-  ];
+  // Tomar solo los últimos 3 documentos (más recientes)
+  const recentDocuments = documents.slice(-3).reverse();
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("es-PE", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const getDocumentStats = () => {
+    const total = documents.length;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const thisMonth = documents.filter((doc) => {
+      const docDate = new Date(doc.createdAt);
+      return (
+        docDate.getMonth() === new Date().getMonth() &&
+        docDate.getFullYear() === new Date().getFullYear()
+      );
+    }).length;
+
+    return { total, thisMonth };
+  };
+
+  const stats = getDocumentStats();
 
   return (
     <div
@@ -158,24 +169,11 @@ export default function DashboardHome({
                 </span>
               </button>
             </li>
-            <li>
-              <button
-                onClick={onLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-[8px] transition-all hover:bg-[rgba(212,165,116,0.1)]"
-                style={{ color: "#9ca3af" }}
-                id="btn_logout"
-              >
-                <LogOut className="w-5 h-5" strokeWidth={2} />
-                <span style={{ fontSize: "15px", fontWeight: "500" }}>
-                  Cerrar sesión
-                </span>
-              </button>
-            </li>
           </ul>
         </nav>
 
         {/* Usage Stats */}
-        <div className="absolute bottom-26 left-3 right-3">
+        <div className="absolute bottom-20 left-3 right-3">
           <div
             className="p-4 rounded-[8px]"
             style={{ backgroundColor: "rgba(212, 165, 116, 0.1)" }}
@@ -198,7 +196,7 @@ export default function DashboardHome({
                   color: "var(--color-white)",
                 }}
               >
-                0
+                {stats.thisMonth}
               </span>
               <span
                 style={{
@@ -214,7 +212,7 @@ export default function DashboardHome({
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: "0%",
+                  width: `${Math.min((stats.thisMonth / 100) * 100, 100)}%`,
                   backgroundColor: "var(--color-gold)",
                 }}
               />
@@ -223,6 +221,19 @@ export default function DashboardHome({
         </div>
 
         {/* Logout Button */}
+        <div className="absolute bottom-3 left-3 right-3">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-[8px] transition-all hover:bg-[rgba(212,165,116,0.1)]"
+            style={{ color: "#9ca3af" }}
+            id="btn_logout"
+          >
+            <LogOut className="w-5 h-5" strokeWidth={2} />
+            <span style={{ fontSize: "15px", fontWeight: "500" }}>
+              Cerrar sesión
+            </span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -328,7 +339,12 @@ export default function DashboardHome({
                 color: "var(--color-charcoal)",
               }}
             >
-              Viernes, 28 de Noviembre 2025
+              {new Date().toLocaleDateString("es-PE", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </p>
           </div>
 
@@ -337,22 +353,25 @@ export default function DashboardHome({
             {[
               {
                 title: "Documentos Totales",
-                value: "0",
-                change: "Comienza a crear",
+                value: stats.total.toString(),
+                change: `+${Math.max(
+                  1,
+                  Math.floor(stats.total * 0.1)
+                )} este mes`,
                 icon: FileText,
                 color: "var(--color-navy)",
               },
               {
                 title: "En Revisión",
                 value: "0",
-                change: "Sin documentos",
+                change: "Sin documentos pendientes",
                 icon: Clock,
                 color: "var(--color-gold)",
               },
               {
                 title: "Completados",
-                value: "0",
-                change: "Crea tu primer documento",
+                value: stats.total.toString(),
+                change: `${stats.thisMonth} este mes`,
                 icon: CheckCircle,
                 color: "#10b981",
               },
@@ -494,17 +513,19 @@ export default function DashboardHome({
                 >
                   Documentos Recientes
                 </h2>
-                <button
-                  id="btn_view_all_documents"
-                  onClick={() => navigate("MyDocuments_List")}
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    color: "var(--color-gold)",
-                  }}
-                >
-                  Ver todos →
-                </button>
+                {documents.length > 0 && (
+                  <button
+                    id="btn_view_all_documents"
+                    onClick={() => navigate("MyDocuments_List")}
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "var(--color-gold)",
+                    }}
+                  >
+                    Ver todos →
+                  </button>
+                )}
               </div>
             </div>
 
@@ -512,15 +533,47 @@ export default function DashboardHome({
             <div className="divide-y" style={{ borderColor: "#e5e7eb" }}>
               {recentDocuments.length === 0 ? (
                 <div className="px-6 py-12 text-center">
+                  <div
+                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                    style={{ backgroundColor: "#f3f4f6" }}
+                  >
+                    <FileText
+                      className="w-8 h-8"
+                      style={{ color: "#9ca3af" }}
+                      strokeWidth={1.5}
+                    />
+                  </div>
                   <p
                     style={{
-                      fontSize: "15px",
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: "var(--color-navy)",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    No hay documentos recientes
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "14px",
                       fontWeight: "400",
                       color: "#6b7280",
                     }}
                   >
-                    No hay documentos recientes. ¡Crea tu primer documento!
+                    Comienza a crear documentos para verlos aquí
                   </p>
+                  <button
+                    onClick={() => navigate("CreateDoc_Step1_SelectTemplate")}
+                    className="mt-6 px-6 py-3 rounded-[8px] transition-all hover:shadow-md"
+                    style={{
+                      backgroundColor: "var(--color-navy)",
+                      color: "var(--color-white)",
+                      fontSize: "15px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Crear Primer Documento
+                  </button>
                 </div>
               ) : (
                 recentDocuments.map((doc) => (
@@ -549,7 +602,7 @@ export default function DashboardHome({
                               color: "var(--color-navy)",
                             }}
                           >
-                            {doc.name}
+                            {doc.templateName}
                           </h4>
                           <div className="flex items-center gap-3">
                             <span
@@ -561,7 +614,7 @@ export default function DashboardHome({
                                 backgroundColor: "#f3f4f6",
                               }}
                             >
-                              {doc.type}
+                              {doc.format.toUpperCase()}
                             </span>
                             <span
                               style={{
@@ -570,7 +623,7 @@ export default function DashboardHome({
                                 color: "#6b7280",
                               }}
                             >
-                              {doc.date}
+                              {formatDate(doc.createdAt)}
                             </span>
                           </div>
                         </div>
@@ -581,17 +634,11 @@ export default function DashboardHome({
                           style={{
                             fontSize: "13px",
                             fontWeight: "500",
-                            color:
-                              doc.status === "Completado"
-                                ? "#065f46"
-                                : "#92400e",
-                            backgroundColor:
-                              doc.status === "Completado"
-                                ? "#dcfce7"
-                                : "#fef3c7",
+                            color: "#065f46",
+                            backgroundColor: "#dcfce7",
                           }}
                         >
-                          {doc.status}
+                          Completado
                         </span>
                         <button
                           className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
