@@ -2,8 +2,8 @@
   "name": "legaldocs-saas",
   "version": "1.0.0",
   "scripts": {
-    "build": "cd legaldocs-frontend && npm install --legacy-peer-deps && npm run build",
-    "install-backend": "cd legaldocs-backend && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps",
+    "build": "cd legaldocs-frontend && npm ci --legacy-peer-deps && npm run build",
+    "install-backend": "cd legaldocs-backend && npm ci --legacy-peer-deps",
     "start": "cd legaldocs-backend && npm start"
   }
 }
