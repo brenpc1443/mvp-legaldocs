@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const dotenv = require("dotenv");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const puppeteer = require("puppeteer");
+const PDFDocument = require("pdfkit");
 
 // Load environment variables
 dotenv.config();
@@ -24,9 +24,6 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
-
-// ✅ SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND (DESPUÉS de las rutas API)
-// Esto se hace al final para no interferir con las rutas /api
 
 // Create documents folder
 const docsFolder = path.join(__dirname, "generated_documents");
@@ -198,71 +195,105 @@ function textToHTML(content, documentTitle) {
     html += `<p style="text-align: justify; line-height: 1.6;">${trimmed}</p>`;
   });
 
-  const fullHTML = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>${documentTitle}</title>
-      <style>
-        body {
-          font-family: 'Arial', sans-serif;
-          margin: 30px;
-          line-height: 1.6;
-          color: #000;
-        }
-        .header {
-          text-align: center;
-          margin-bottom: 40px;
-        }
-        .header h1 {
-          font-size: 28px;
-          font-weight: bold;
-          color: #1a2332;
-          margin: 20px 0 10px 0;
-          letter-spacing: -0.01em;
-        }
-        .header p {
-          font-size: 16px;
-          font-weight: 500;
-          color: #3d4451;
-          margin: 0;
-        }
-        h2 {
-          font-size: 20px;
-          font-weight: bold;
-          text-align: center;
-          margin: 20px 0 15px 0;
-        }
-        h3 {
-          font-size: 16px;
-          font-weight: bold;
-          margin: 15px 0 10px 0;
-        }
-        p {
-          font-size: 14px;
-          margin: 8px 0;
-          text-align: justify;
-          line-height: 1.6;
-        }
-        strong {
-          font-weight: bold;
-        }
-        .page-break {
-          page-break-after: always;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>${documentTitle}</h1>
-      </div>
-      ${html}
-    </body>
-    </html>
-  `;
+  return html;
+}
 
-  return fullHTML;
+function createPdfWithPDFKit(textContent, fileName) {
+  return new Promise((resolve, reject) => {
+    try {
+      const filePath = path.join(docsFolder, `${fileName}.pdf`);
+
+      console.log(`📝 Creando PDF con PDFKit: ${filePath}`);
+
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 50,
+      });
+
+      const stream = fs.createWriteStream(filePath);
+
+      doc.pipe(stream);
+
+      // Título
+      doc
+        .fontSize(20)
+        .font("Helvetica-Bold")
+        .text("DOCUMENTO LEGAL", { align: "center" });
+
+      doc.moveDown(0.5);
+      doc
+        .fontSize(11)
+        .font("Helvetica")
+        .text(new Date().toLocaleDateString("es-PE"), { align: "center" });
+
+      doc.moveDown(1);
+
+      // Contenido
+      const lines = textContent.split("\n");
+      lines.forEach((line) => {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          doc.moveDown(0.3);
+          return;
+        }
+
+        if (
+          trimmed.match(
+            /^(CONSIDERANDOS|CONSIDERANDO|RECITALES|CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
+          )
+        ) {
+          doc.moveDown(0.2);
+          doc.fontSize(12).font("Helvetica-Bold").text(trimmed);
+          doc.moveDown(0.2);
+        } else {
+          doc.fontSize(10).font("Helvetica").text(trimmed, {
+            align: "justify",
+            lineGap: 3,
+          });
+        }
+      });
+
+      doc.end();
+
+      stream.on("finish", () => {
+        const stats = fs.statSync(filePath);
+        console.log(
+          `✅ PDF creado correctamente: ${filePath} (${stats.size} bytes)`
+        );
+        resolve(filePath);
+      });
+
+      stream.on("error", (error) => {
+        console.error("❌ Error escribiendo PDF:", error);
+        reject(error);
+      });
+    } catch (error) {
+      console.error("❌ Error creando PDF:", error);
+      reject(error);
+    }
+  });
+}
+
+function createWordDocument(htmlContent, fileName) {
+  try {
+    const filePath = path.join(docsFolder, `${fileName}.docx`);
+
+    const wordContent = htmlContent
+      .replace(/<[^>]*>/g, "\n")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/\n\n+/g, "\n\n");
+
+    fs.writeFileSync(filePath, wordContent, "utf8");
+
+    console.log("✅ Documento Word creado correctamente");
+    return filePath;
+  } catch (error) {
+    console.error("❌ Error creando Word:", error);
+    throw error;
+  }
 }
 
 function buildPrompt(templateId, data) {
@@ -528,79 +559,7 @@ D.S. 003-97-TR y normas laborales vigentes en Perú.`,
   return contents[template.id] || contents[1];
 }
 
-async function createPdfDocument(htmlContent, fileName) {
-  let browser;
-  try {
-    const filePath = path.join(docsFolder, `${fileName}.pdf`);
-
-    console.log(`📝 Creando PDF: ${filePath}`);
-
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-      ],
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-
-    await page.pdf({
-      path: filePath,
-      format: "A4",
-      margin: { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" },
-      printBackground: true,
-    });
-
-    await browser.close();
-
-    // Verificar que el archivo existe
-    if (fs.existsSync(filePath)) {
-      const stats = fs.statSync(filePath);
-      console.log(
-        `✅ PDF creado correctamente: ${filePath} (${stats.size} bytes)`
-      );
-      return filePath;
-    } else {
-      throw new Error(`PDF no se guardó en: ${filePath}`);
-    }
-  } catch (error) {
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (e) {
-        console.error("Error cerrando browser:", e);
-      }
-    }
-    console.error("❌ Error generando PDF:", error);
-    throw error;
-  }
-}
-
-async function createWordDocument(htmlContent, fileName) {
-  try {
-    const filePath = path.join(docsFolder, `${fileName}.docx`);
-
-    const wordContent = htmlContent
-      .replace(/<[^>]*>/g, "\n")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/\n\n+/g, "\n\n");
-
-    fs.writeFileSync(filePath, wordContent, "utf8");
-
-    console.log("✅ Documento Word creado correctamente");
-    return filePath;
-  } catch (error) {
-    console.error("❌ Error creando Word:", error);
-    throw error;
-  }
-}
-
-// ========== API ROUTES (DEBEN IR ANTES DE SERVIR ARCHIVOS ESTÁTICOS) ==========
+// ========== API ROUTES ==========
 
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
@@ -655,8 +614,7 @@ app.post("/api/generate-document", async (req, res) => {
 
     if (format === "preview") {
       console.log(`✅ Retornando preview (sin guardar)`);
-      const plainText = extractTextFromHTML(content);
-      return res.send(plainText);
+      return res.send(content);
     }
 
     const fileName = `${template.name.replace(/\s+/g, "_")}_${Date.now()}`;
@@ -667,8 +625,8 @@ app.post("/api/generate-document", async (req, res) => {
     console.log(`📁 Nombre base: ${fileName}`);
 
     if (format === "pdf") {
-      console.log(`🔄 Generando PDF con Puppeteer...`);
-      filePath = await createPdfDocument(htmlContent, fileName);
+      console.log(`🔄 Generando PDF con PDFKit...`);
+      filePath = await createPdfWithPDFKit(content, fileName);
       fileExtension = "pdf";
     } else {
       console.log(`🔄 Generando DOCX...`);
@@ -699,7 +657,6 @@ app.post("/api/generate-document", async (req, res) => {
 
     console.log(`${"=".repeat(60)}\n`);
 
-    // Enviar el archivo Y la información del documento
     res.json({
       success: true,
       fileName: finalFileName,
@@ -712,7 +669,7 @@ app.post("/api/generate-document", async (req, res) => {
     console.error(`   ${error.message}`);
     console.error(`${"=".repeat(60)}\n`);
     res.status(500).json({
-      error: "Error generating document :'v",
+      error: "Error generating document",
       details: error.message,
     });
   }
@@ -735,19 +692,15 @@ app.get("/api/download/:fileName", (req, res) => {
     console.log(`\n📥 Solicitud de descarga recibida`);
     console.log(`📄 Nombre del archivo: ${fileName}`);
     console.log(`📂 Ruta completa: ${filePath}`);
-    console.log(`📂 Carpeta de documentos: ${docsFolder}`);
 
-    // Listar archivos disponibles
     const availableFiles = fs.readdirSync(docsFolder);
     console.log(`📋 Archivos disponibles: ${availableFiles.join(", ")}`);
 
     if (!fs.existsSync(filePath)) {
       console.error(`❌ Archivo no encontrado: ${filePath}`);
-      console.error(`❌ Se esperaba encontrar el archivo en: ${filePath}`);
       return res.status(404).json({
         error: "Archivo no encontrado",
         requestedFile: fileName,
-        searchedPath: filePath,
         availableFiles: availableFiles,
       });
     }
@@ -774,14 +727,13 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "LegalDocs API running" });
 });
 
-// ========== SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND (AL FINAL) ==========
+// Servir frontend estático
 const frontendPath = path.join(__dirname, "../legaldocs-frontend/dist");
 if (fs.existsSync(frontendPath)) {
   app.use(express.static(frontendPath));
   console.log("✅ Frontend estático servido desde:", frontendPath);
 }
 
-// ✅ SERVIR FRONTEND EN RUTAS NO ENCONTRADAS (SPA FALLBACK)
 app.get("*", (req, res) => {
   const indexPath = path.join(frontendPath, "index.html");
   if (fs.existsSync(indexPath)) {
@@ -792,7 +744,7 @@ app.get("*", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 LegalDocs Backend - Gemini + Puppeteer Edition`);
+  console.log(`\n🚀 LegalDocs Backend - PDFKit Edition`);
   console.log(`   http://localhost:${PORT}`);
   console.log(`\n📊 Modelo IA: Gemini Pro`);
   console.log(

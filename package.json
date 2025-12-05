@@ -1,6 +1,4 @@
 {
-  "name": "legaldocs-saas",
-  "version": "1.0.0",
   "scripts": {
     "build": "cd legaldocs-frontend && npm ci --include=dev --legacy-peer-deps && npm run build && cd ../legaldocs-backend && npm ci --legacy-peer-deps",
     "start": "cd legaldocs-backend && npm start"
