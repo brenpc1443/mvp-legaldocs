@@ -159,108 +159,192 @@ const templates = [
 
 const documentCache = new Map();
 
-function textToHTML(content, documentTitle) {
-  const lines = content.split("\n");
-  let html = "";
-
-  lines.forEach((line) => {
-    let trimmed = line.trim();
-
-    if (!trimmed) {
-      html += "<br>";
-      return;
-    }
-
-    trimmed = trimmed.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-
-    if (trimmed.match(/^(CONSIDERANDOS|CONSIDERANDO|RECITALES)/i)) {
-      html += `<h2 style="text-align: center; font-weight: bold; margin-top: 20px; margin-bottom: 15px;">${trimmed}</h2>`;
-      return;
-    }
-
-    if (
-      trimmed.match(
-        /^(CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
-      )
-    ) {
-      html += `<h3 style="font-weight: bold; margin-top: 12px; margin-bottom: 10px;">${trimmed}</h3>`;
-      return;
-    }
-
-    if (trimmed.match(/^(\d+\.\d+\.?|[a-z]\))/)) {
-      html += `<p style="margin-left: 40px; line-height: 1.6;">${trimmed}</p>`;
-      return;
-    }
-
-    html += `<p style="text-align: justify; line-height: 1.6;">${trimmed}</p>`;
-  });
-
-  return html;
-}
-
-function createPdfWithPDFKit(textContent, fileName) {
+// Reemplaza tu createPdfWithPDFKit por esta versión mejorada
+function createPdfWithPDFKit(textContent, fileName, documentTitle) {
   return new Promise((resolve, reject) => {
     try {
       const filePath = path.join(docsFolder, `${fileName}.pdf`);
+      console.log(`📝 Creando PDF con PDFKit (mejorado): ${filePath}`);
 
-      console.log(`📝 Creando PDF con PDFKit: ${filePath}`);
+      // Config
+      const pageWidth = 595.28; // A4 pt ~ 8.27in * 72
+      const pageHeight = 841.89;
+      const margin = { top: 40, right: 40, bottom: 40, left: 40 };
+      const contentWidth = pageWidth - margin.left - margin.right;
+      const lineHeightFactor = 1.6; // similar a tu CSS
+      const headingSpacing = 12;
+      const paragraphSpacing = 6;
 
       const doc = new PDFDocument({
         size: "A4",
-        margin: 50,
+        margins: { top: margin.top, left: margin.left, right: margin.right, bottom: margin.bottom },
       });
 
       const stream = fs.createWriteStream(filePath);
-
       doc.pipe(stream);
 
-      // Título
-      doc
-        .fontSize(20)
-        .font("Helvetica-Bold")
-        .text("DOCUMENTO LEGAL", { align: "center" });
+      // Registrar fuentes locales si existen (mejor parecido)
+      const fontsDir = path.join(__dirname, "fonts"); // crea folder fonts/ con tus .ttf
+      const interRegular = path.join(fontsDir, "Inter-Regular.ttf");
+      const interBold = path.join(fontsDir, "Inter-Bold.ttf");
+      const helvetica = null;
 
-      doc.moveDown(0.5);
-      doc
-        .fontSize(11)
-        .font("Helvetica")
-        .text(new Date().toLocaleDateString("es-PE"), { align: "center" });
+      if (fs.existsSync(interRegular)) {
+        try { doc.registerFont("Inter", interRegular); } catch (e) { console.warn("No pudo registrar Inter Regular", e.message); }
+      }
+      if (fs.existsSync(interBold)) {
+        try { doc.registerFont("Inter-Bold", interBold); } catch (e) { console.warn("No pudo registrar Inter Bold", e.message); }
+      }
 
-      doc.moveDown(1);
+      // Helpers
+      function currentFont(normal = true) {
+        if (fs.existsSync(interRegular) && fs.existsSync(interBold)) {
+          return normal ? "Inter" : "Inter-Bold";
+        } else {
+          return normal ? "Helvetica" : "Helvetica-Bold";
+        }
+      }
 
-      // Contenido
+      function addHeader(title) {
+        // Header area similar al HTML: centered title + subtitle estilo
+        const titleFont = currentFont(false);
+        doc.font(titleFont).fontSize(20);
+        // Letter spacing emulación aproximada (dibujar texto centrado)
+        doc.fillColor("#1a2332");
+        const titleOptions = { width: contentWidth, align: "center", lineGap: 2 };
+        doc.text(title, margin.left, margin.top - 10, titleOptions);
+        doc.moveDown(0.6);
+      }
+
+      let cursorY = margin.top + 20; // cursor inicial después del header
+      addHeader(documentTitle);
+      cursorY = doc.y;
+
+      // Dibuja una linea divisoria similar al HTML
+      doc.moveTo(margin.left, cursorY).lineTo(pageWidth - margin.right, cursorY).stroke();
+      cursorY = doc.y + 6;
+      doc.y = cursorY;
+
+      // Función para crear nueva página si falta espacio
+      function ensureSpace(needed) {
+        if (doc.y + needed > pageHeight - margin.bottom) {
+          doc.addPage();
+          // repetir header en cada página (opcional)
+          doc.font(currentFont(false)).fontSize(12);
+          doc.y = margin.top;
+        }
+      }
+
+      // Procesar el contenido línea por línea, aplicando estilos parecidos al HTML
       const lines = textContent.split("\n");
-      lines.forEach((line) => {
-        const trimmed = line.trim();
 
-        if (!trimmed) {
-          doc.moveDown(0.3);
+      lines.forEach((rawLine, index) => {
+        let line = rawLine.replace(/\r/g, "").trim();
+
+        // Respeta líneas vacías como separadores
+        if (!line) {
+          doc.moveDown(0.5);
           return;
         }
 
-        if (
-          trimmed.match(
-            /^(CONSIDERANDOS|CONSIDERANDO|RECITALES|CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
-          )
-        ) {
-          doc.moveDown(0.2);
-          doc.fontSize(12).font("Helvetica-Bold").text(trimmed);
-          doc.moveDown(0.2);
-        } else {
-          doc.fontSize(10).font("Helvetica").text(trimmed, {
-            align: "justify",
-            lineGap: 3,
-          });
+        // **negrita** -> usaremos font bold inline
+        const parts = line.split(/(\*\*.*?\*\*)/g); // separa tokens con **bold**
+        const isSectionHeader = line.match(/^(CONSIDERANDOS|CONSIDERANDO|RECITALES)/i);
+        const isH2 = line.match(/^[A-ZÁÉÍÓÚÑ\s]{6,}$/) && line.length < 60 && isSectionHeader;
+        const isClauseTitle = line.match(/^(CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i);
+        const isClauseNumber = line.match(/^CLÁUSULA\s+(?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i);
+        const isSubsection = line.match(/^[a-z]\)/);
+
+        // Sección principal grande (centrada, bold)
+        if (isH2) {
+          ensureSpace(30);
+          doc.font(currentFont(false)).fontSize(14);
+          doc.text(line, { align: "center", width: contentWidth });
+          doc.moveDown(0.6);
+          return;
         }
+
+        // Clause title style (h3)
+        if (isClauseNumber || isClauseTitle) {
+          ensureSpace(28);
+          doc.font(currentFont(false)).fontSize(12);
+          doc.text(line, { align: "left", width: contentWidth });
+          doc.moveDown(0.4);
+          return;
+        }
+
+        // Subsection (a) b)
+        if (isSubsection) {
+          ensureSpace(20);
+          doc.font(currentFont(true)).fontSize(10);
+          // Indent subsections
+          doc.text(line, { align: "left", width: contentWidth - 40, indent: 20, lineGap: 3 });
+          doc.moveDown(0.2);
+          return;
+        }
+
+        // Parrafo normal: justificar, respetando **bold** inline
+        ensureSpace(24);
+        // Para simular inline bold, iteramos partes
+        const normalFont = currentFont(true);
+        const boldFont = currentFont(false);
+
+        // Calculamos línea compuesta usando text(...) secuencialmente con continued: true
+        doc.font(normalFont).fontSize(10);
+
+        parts.forEach((part) => {
+          if (!part) return;
+          const m = part.match(/^\*\*(.*)\*\*$/);
+          if (m) {
+            // bold segment
+            doc.font(boldFont).fontSize(10);
+            doc.text(m[1], { continued: true });
+            doc.font(normalFont).fontSize(10);
+          } else {
+            // normal segment
+            doc.font(normalFont).fontSize(10);
+            doc.text(part, { continued: true });
+          }
+        });
+
+        // terminar la línea y aplicar justificado aproximado
+        doc.text("", { continued: false, align: "justify", width: contentWidth, lineGap: 4 });
+
+        doc.moveDown(0.1);
       });
 
+      // Agregar linea divisoria final y firmas
+      ensureSpace(120);
+      doc.moveDown(1);
+      doc.moveTo(margin.left, doc.y).lineTo(pageWidth - margin.right, doc.y).stroke();
+      doc.moveDown(0.8);
+
+      doc.font(currentFont(true)).fontSize(10).text("En señal de conformidad, las partes suscriben el presente documento:", {
+        align: "center",
+      });
+
+      doc.moveDown(2);
+
+      const signatureY = doc.y;
+      const signatureWidth = 160;
+      const spacing = 240;
+
+      // Primera firma
+      doc.moveTo(margin.left + 40, signatureY + 60).lineTo(margin.left + 40 + signatureWidth, signatureY + 60).stroke();
+      doc.font(currentFont(false)).fontSize(9).text("_________________________", margin.left + 10, signatureY + 65, { width: signatureWidth, align: "left" });
+      doc.font(currentFont(true)).fontSize(8).text("FIRMA", margin.left + 10, signatureY + 85, { width: signatureWidth, align: "left" });
+
+      // Segunda firma
+      doc.moveTo(margin.left + 40 + spacing, signatureY + 60).lineTo(margin.left + 40 + spacing + signatureWidth, signatureY + 60).stroke();
+      doc.font(currentFont(false)).fontSize(9).text("_________________________", margin.left + 10 + spacing, signatureY + 65, { width: signatureWidth, align: "left" });
+      doc.font(currentFont(true)).fontSize(8).text("FIRMA", margin.left + 10 + spacing, signatureY + 85, { width: signatureWidth, align: "left" });
+
+      // Finalizar documento
       doc.end();
 
       stream.on("finish", () => {
         const stats = fs.statSync(filePath);
-        console.log(
-          `✅ PDF creado correctamente: ${filePath} (${stats.size} bytes)`
-        );
+        console.log(`✅ PDF creado correctamente: ${filePath} (${stats.size} bytes)`);
         resolve(filePath);
       });
 
@@ -275,15 +359,12 @@ function createPdfWithPDFKit(textContent, fileName) {
   });
 }
 
-function createWordDocument(htmlContent, fileName) {
+
+function createWordDocument(textContent, fileName) {
   try {
     const filePath = path.join(docsFolder, `${fileName}.docx`);
 
-    const wordContent = htmlContent
-      .replace(/<[^>]*>/g, "\n")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
+    const wordContent = textContent
       .replace(/\n\n+/g, "\n\n");
 
     fs.writeFileSync(filePath, wordContent, "utf8");
@@ -475,12 +556,7 @@ CLÁUSULA SÉPTIMA: TERMINACIÓN
 El presente contrato terminará al vencimiento del plazo. Podrá resolverse por incumplimiento grave de cualquiera de las partes.
 
 CLÁUSULA OCTAVA: LEY APLICABLE
-El presente contrato se rige conforme a las leyes de la República del Perú.
-
-CLÁUSULA NOVENA: FIRMAS
-En señal de conformidad, se firma en Lima, ${new Date().toLocaleDateString(
-      "es-PE"
-    )}`,
+El presente contrato se rige conforme a las leyes de la República del Perú.`,
 
     2: `ACUERDO DE CONFIDENCIALIDAD
 
@@ -587,13 +663,6 @@ app.get("/api/templates/:id", (req, res) => {
   res.json(template);
 });
 
-function extractTextFromHTML(htmlContent) {
-  let text = htmlContent.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
-  text = text.replace(/<[^>]*>/g, "");
-  text = text.replace(/\n\n+/g, "\n\n").trim();
-  return text;
-}
-
 app.post("/api/generate-document", async (req, res) => {
   try {
     const { templateId, formData, format, userId } = req.body;
@@ -610,7 +679,6 @@ app.post("/api/generate-document", async (req, res) => {
     console.log(`👤 Usuario ID: ${userId || "N/A"}`);
 
     const content = await generateDocumentContent(template, formData);
-    const htmlContent = textToHTML(content, template.name);
 
     if (format === "preview") {
       console.log(`✅ Retornando preview (sin guardar)`);
@@ -626,11 +694,11 @@ app.post("/api/generate-document", async (req, res) => {
 
     if (format === "pdf") {
       console.log(`🔄 Generando PDF con PDFKit...`);
-      filePath = await createPdfWithPDFKit(content, fileName);
+      filePath = await createPdfWithPDFKit(content, fileName, template.name);
       fileExtension = "pdf";
     } else {
       console.log(`🔄 Generando DOCX...`);
-      filePath = await createWordDocument(htmlContent, fileName);
+      filePath = await createWordDocument(content, fileName);
       fileExtension = "docx";
     }
 

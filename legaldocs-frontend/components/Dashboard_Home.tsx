@@ -166,6 +166,19 @@ export default function DashboardHome({
                 </span>
               </button>
             </li>
+            <li>
+              <button
+                onClick={onLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-[8px] transition-all hover:bg-[rgba(212,165,116,0.1)]"
+                style={{ color: "#9ca3af" }}
+                id="btn_logout"
+              >
+                <LogOut className="w-5 h-5" strokeWidth={2} />
+                <span style={{ fontSize: "15px", fontWeight: "500" }}>
+                  Cerrar sesión
+                </span>
+              </button>
+            </li>
           </ul>
         </nav>
 
@@ -215,21 +228,6 @@ export default function DashboardHome({
               />
             </div>
           </div>
-        </div>
-
-        {/* Logout Button */}
-        <div className="absolute bottom-3 left-3 right-3">
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-[8px] transition-all hover:bg-[rgba(212,165,116,0.1)]"
-            style={{ color: "#9ca3af" }}
-            id="btn_logout"
-          >
-            <LogOut className="w-5 h-5" strokeWidth={2} />
-            <span style={{ fontSize: "15px", fontWeight: "500" }}>
-              Cerrar sesión
-            </span>
-          </button>
         </div>
       </aside>
 
