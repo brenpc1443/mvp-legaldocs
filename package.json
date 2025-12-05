@@ -1,9 +1,8 @@
 {
   "name": "legaldocs-saas",
   "version": "1.0.0",
-  "description": "LegalDocs - Plataforma SaaS para documentos legales",
-  "workspaces": [
-    "legaldocs-backend",
-    "legaldocs-frontend"
-  ]
+  "scripts": {
+    "build": "cd legaldocs-frontend && npm install && npm run build && cd ../legaldocs-backend && npm install",
+    "start": "cd legaldocs-backend && npm start"
+  }
 }

@@ -29,6 +29,13 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
+// ✅ SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND
+const frontendPath = path.join(__dirname, "../legaldocs-frontend/dist");
+if (fs.existsSync(frontendPath)) {
+  app.use(express.static(frontendPath));
+  console.log("✅ Frontend estático servido desde:", frontendPath);
+}
+
 // Create documents folder
 const docsFolder = path.join(__dirname, "generated_documents");
 const dbFolder = path.join(__dirname, "db");
@@ -773,20 +780,15 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "LegalDocs API running" });
 });
 
-// Servir frontend estático en producción
-if (process.env.NODE_ENV === "production") {
-  import("path").then(({ resolve }) => {
-    import("url").then(({ fileURLToPath }) => {
-      const __dirname = resolve(fileURLToPath(import.meta.url), "..");
-      app.use(express.static(resolve(__dirname, "../legaldocs-frontend/dist")));
-      app.get("*", (req, res) => {
-        res.sendFile(
-          resolve(__dirname, "../legaldocs-frontend/dist/index.html")
-        );
-      });
-    });
-  });
-}
+// ✅ SERVIR FRONTEND EN RUTAS NO ENCONTRADAS (SPA FALLBACK)
+app.get("*", (req, res) => {
+  const indexPath = path.join(frontendPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).json({ error: "Frontend not found" });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`\n🚀 LegalDocs Backend - Gemini + Puppeteer Edition`);
