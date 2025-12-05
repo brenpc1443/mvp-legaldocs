@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Scale, Mail, Lock, User, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { NavigateFunction } from "@/types";
 
 type RegisterProps = {
-  navigate: (route: string, params?: any) => void;
+  navigate: NavigateFunction;
 };
 
 export default function Register({ navigate }: RegisterProps) {

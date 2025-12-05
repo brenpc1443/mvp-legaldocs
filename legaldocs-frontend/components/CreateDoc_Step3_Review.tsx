@@ -7,36 +7,53 @@ import {
   Check,
   Loader,
 } from "lucide-react";
+import { NavigateFunction  } from "../src/types";
 
 const API_URL =
   (import.meta as any).env?.VITE_API_URL ?? "http://localhost:5000";
 
-type FormDataType = {
-  clientName: string;
-  documentType: string;
-  startDate: string;
-  ruc: string;
-  clauses?: {
-    confidentiality?: boolean;
-    [key: string]: any;
-  };
+interface FormDataType {
+  clientName?: string;
+  documentType?: string;
+  startDate?: string;
+  ruc?: string;
   [key: string]: any;
-};
+}
 
-type TemplateType = {
+interface TemplateType {
   id: number;
   name: string;
   [key: string]: any;
-};
+}
 
-type CreateDocStep3Props = {
-  navigate: (route: string, params?: any) => void;
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+interface SavedDocument {
+  id: string;
+  userId: number;
+  templateId: number;
+  templateName: string;
+  fileName: string;
+  fileSize?: number;
+  createdAt: string;
+  filePath?: string;
+  format: "pdf" | "docx";
+}
+
+interface CreateDocStep3Props {
+  navigate: NavigateFunction ;
   formData: FormDataType;
   template: TemplateType;
   setShowSuccessModal: (show: boolean) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
-};
+  currentUser: User | null;
+  onDocumentSaved: (doc: SavedDocument) => void;
+}
 
 export default function CreateDocStep3({
   navigate,
@@ -45,6 +62,8 @@ export default function CreateDocStep3({
   setShowSuccessModal,
   loading,
   setLoading,
+  currentUser,
+  onDocumentSaved,
 }: CreateDocStep3Props) {
   const [displayedContent, setDisplayedContent] = useState("");
   const [fullContent, setFullContent] = useState("");
@@ -60,7 +79,6 @@ export default function CreateDocStep3({
       documentType: "Consultoría Legal",
       startDate: "2025-12-01",
       ruc: "20123456789",
-      clauses: { confidentiality: true },
     };
     template = { id: 1, name: "Contrato de Servicios Profesionales" };
   }
@@ -114,6 +132,11 @@ export default function CreateDocStep3({
   }, [template.id, formData]);
 
   const handleGenerateDocument = async (format: "pdf" | "docx") => {
+    if (!currentUser) {
+      alert("Debes estar autenticado para descargar documentos");
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch(`${API_URL}/api/generate-document`, {
@@ -134,17 +157,34 @@ export default function CreateDocStep3({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${template.name}.${format === "pdf" ? "pdf" : "docx"}`;
+      const fileName = `${template.name}.${format === "pdf" ? "pdf" : "docx"}`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      setGeneratedFileName(`${template.name}.${format}`);
+      // Guardar documento en la lista
+      const savedDoc: SavedDocument = {
+        id: Date.now().toString(),
+        userId: currentUser.id,
+        templateId: template.id,
+        templateName: template.name,
+        fileName: fileName,
+        fileSize: blob.size,
+        createdAt: new Date().toISOString(),
+        format: format,
+        filePath: `${template.name.replace(/\s+/g, "_")}_${Date.now()}.${
+          format === "pdf" ? "pdf" : "docx"
+        }`,
+      };
+
+      onDocumentSaved(savedDoc);
+      setGeneratedFileName(fileName);
       setShowSuccessModal(true);
     } catch (error) {
       console.error("Error:", error);
-      alert("Error generating document. Please try again.");
+      alert("Error al generar documento. Por favor, intenta de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -323,7 +363,7 @@ export default function CreateDocStep3({
                 </div>
               </div>
 
-              {/* Document Preview Content - Con efecto streaming */}
+              {/* Document Preview Content */}
               <div className="px-10 py-12">
                 <div
                   className="bg-white border-2 rounded-[8px] p-16 min-h-[500px]"

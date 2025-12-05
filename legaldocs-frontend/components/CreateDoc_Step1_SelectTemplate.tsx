@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Check,
 } from "lucide-react";
+import { NavigateFunction } from "@/types";
 
 interface Template {
   id: number;
@@ -21,7 +22,7 @@ interface Template {
 }
 
 interface CreateDocStep1Props {
-  navigate: (route: string, params?: Record<string, any>) => void;
+  navigate: NavigateFunction;
 }
 
 export default function CreateDocStep1({ navigate }: CreateDocStep1Props) {

@@ -1,8 +1,18 @@
-import { Briefcase, FileText, Scale, Search, Shield, Users } from "lucide-react";
+import { NavigateFunction } from "@/types";
+import {
+  ArrowRight,
+  Briefcase,
+  FileText,
+  LucideProps,
+  Scale,
+  Search,
+  Shield,
+  Users,
+} from "lucide-react";
 import React from "react";
 
 type TemplatesListProps = {
-  navigate: (route: string, params?: any) => void;
+  navigate: NavigateFunction;
 };
 
 export default function TemplatesList({ navigate }: TemplatesListProps) {
@@ -73,7 +83,18 @@ export default function TemplatesList({ navigate }: TemplatesListProps) {
     },
   ];
 
-  const handleTemplateClick = (template) => {
+  const handleTemplateClick = (template: {
+    id: number;
+    name: string;
+    category: string;
+    description: string;
+    icon: React.ForwardRefExoticComponent<
+      Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
+    >;
+    color: string;
+    popular: boolean;
+    fields: number;
+  }) => {
     navigate("Template_Detail", { template });
   };
 

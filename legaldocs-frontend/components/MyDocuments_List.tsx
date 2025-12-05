@@ -7,63 +7,53 @@ import {
   MoreVertical,
   Search,
   Filter,
+  Trash2,
 } from "lucide-react";
+import { NavigateFunction } from "../src/types";
 
-type MyDocumentsListProps = {
-  navigate: (route: string, params?: any) => void;
-};
+interface SavedDocument {
+  id: string;
+  userId: number;
+  templateId: number;
+  templateName: string;
+  fileName: string;
+  fileSize?: number;
+  createdAt: string;
+  filePath?: string;
+  format: "pdf" | "docx";
+}
 
-export default function MyDocumentsList({ navigate }: MyDocumentsListProps) {
-  const documents = [
-    {
-      id: 1,
-      name: "Contrato de Servicios Profesionales",
-      type: "Contrato",
-      date: "28 Nov 2025",
-      status: "Completado",
-      statusColor: "#10b981",
-    },
-    {
-      id: 2,
-      name: "Poder Notarial General",
-      type: "Poder",
-      date: "27 Nov 2025",
-      status: "En revisión",
-      statusColor: "#d4a574",
-    },
-    {
-      id: 3,
-      name: "Acuerdo de Confidencialidad (NDA)",
-      type: "NDA",
-      date: "26 Nov 2025",
-      status: "Completado",
-      statusColor: "#10b981",
-    },
-    {
-      id: 4,
-      name: "Contrato Laboral - Gerente Legal",
-      type: "Contrato",
-      date: "25 Nov 2025",
-      status: "Borrador",
-      statusColor: "#6b7280",
-    },
-    {
-      id: 5,
-      name: "Escritura de Constitución de Empresa",
-      type: "Escritura",
-      date: "24 Nov 2025",
-      status: "Completado",
-      statusColor: "#10b981",
-    },
-    {
-      id: 6,
-      name: "Contrato de Arrendamiento Comercial",
-      type: "Contrato",
-      date: "23 Nov 2025",
-      status: "Completado",
-      statusColor: "#10b981",
-    },
-  ];
+interface MyDocumentsListProps {
+  navigate: NavigateFunction;
+  documents: SavedDocument[];
+  onDeleteDocument: (docId: string) => void;
+}
+
+export default function MyDocumentsList({
+  navigate,
+  documents,
+  onDeleteDocument,
+}: MyDocumentsListProps) {
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  const filteredDocuments = documents.filter((doc) =>
+    doc.templateName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("es-PE", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return "0 B";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  };
 
   return (
     <div
@@ -152,6 +142,8 @@ export default function MyDocumentsList({ navigate }: MyDocumentsListProps) {
               id="input_search_documents"
               type="text"
               placeholder="Buscar por nombre o tipo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3.5 rounded-[8px] border transition-colors focus:outline-none focus:ring-2"
               style={{
                 borderColor: "#e5e7eb",
@@ -196,235 +188,256 @@ export default function MyDocumentsList({ navigate }: MyDocumentsListProps) {
                 color: "var(--color-navy)",
               }}
             >
-              Todos los Documentos ({documents.length})
+              Todos los Documentos ({filteredDocuments.length})
             </h2>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b" style={{ borderColor: "#e5e7eb" }}>
-                  <th
-                    className="px-6 py-4 text-left"
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      color: "var(--color-charcoal)",
-                      backgroundColor: "#f9fafb",
-                    }}
-                  >
-                    Nombre
-                  </th>
-                  <th
-                    className="px-6 py-4 text-left"
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      color: "var(--color-charcoal)",
-                      backgroundColor: "#f9fafb",
-                    }}
-                  >
-                    Tipo
-                  </th>
-                  <th
-                    className="px-6 py-4 text-left"
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      color: "var(--color-charcoal)",
-                      backgroundColor: "#f9fafb",
-                    }}
-                  >
-                    Fecha
-                  </th>
-                  <th
-                    className="px-6 py-4 text-left"
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      color: "var(--color-charcoal)",
-                      backgroundColor: "#f9fafb",
-                    }}
-                  >
-                    Estado
-                  </th>
-                  <th
-                    className="px-6 py-4 text-left"
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: "600",
-                      color: "var(--color-charcoal)",
-                      backgroundColor: "#f9fafb",
-                    }}
-                  >
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map((doc) => (
-                  <tr
-                    key={doc.id}
-                    id={`document_row_${doc.id}`}
-                    className="border-b hover:bg-[#fafbfc] transition-colors"
-                    style={{ borderColor: "#e5e7eb" }}
-                  >
-                    {/* Name Column */}
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-10 h-10 rounded-[8px] flex items-center justify-center flex-shrink-0"
-                          style={{ backgroundColor: "var(--color-navy)" }}
-                        >
-                          <FileText
-                            className="w-5 h-5"
-                            style={{ color: "var(--color-gold)" }}
-                            strokeWidth={2}
-                          />
-                        </div>
-                        <span
-                          style={{
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            color: "var(--color-navy)",
-                          }}
-                        >
-                          {doc.name}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Type Column */}
-                    <td className="px-6 py-5">
-                      <span
-                        className="px-3 py-1.5 rounded-full"
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: "500",
-                          color: "var(--color-charcoal)",
-                          backgroundColor: "#f3f4f6",
-                        }}
-                      >
-                        {doc.type}
-                      </span>
-                    </td>
-
-                    {/* Date Column */}
-                    <td className="px-6 py-5">
-                      <span
-                        style={{
-                          fontSize: "15px",
-                          fontWeight: "400",
-                          color: "var(--color-charcoal)",
-                        }}
-                      >
-                        {doc.date}
-                      </span>
-                    </td>
-
-                    {/* Status Column */}
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: doc.statusColor }}
-                        />
-                        <span
-                          style={{
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            color: "var(--color-charcoal)",
-                          }}
-                        >
-                          {doc.status}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Actions Column */}
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2">
-                        <button
-                          id={`btn_view_${doc.id}`}
-                          className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
-                          title="Ver documento"
-                        >
-                          <Eye
-                            className="w-5 h-5"
-                            style={{ color: "var(--color-charcoal)" }}
-                            strokeWidth={2}
-                          />
-                        </button>
-                        <button
-                          id={`btn_download_${doc.id}`}
-                          className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
-                          title="Descargar"
-                        >
-                          <Download
-                            className="w-5 h-5"
-                            style={{ color: "var(--color-charcoal)" }}
-                            strokeWidth={2}
-                          />
-                        </button>
-                        <button
-                          id={`btn_more_${doc.id}`}
-                          className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
-                          title="Más opciones"
-                        >
-                          <MoreVertical
-                            className="w-5 h-5"
-                            style={{ color: "var(--color-charcoal)" }}
-                            strokeWidth={2}
-                          />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Table Footer */}
-          <div
-            className="px-6 py-4 border-t flex items-center justify-between"
-            style={{ borderColor: "#e5e7eb" }}
-          >
-            <p
-              style={{
-                fontSize: "13px",
-                fontWeight: "400",
-                color: "#6b7280",
-              }}
-            >
-              Mostrando {documents.length} de {documents.length} documentos
-            </p>
-            <div className="flex gap-2">
-              <button
-                className="px-4 py-2 rounded-[8px] border transition-colors hover:bg-[#f5f6f7]"
+          {/* Empty State */}
+          {filteredDocuments.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: "#f3f4f6" }}
+              >
+                <FileText
+                  className="w-8 h-8"
+                  style={{ color: "#9ca3af" }}
+                  strokeWidth={1.5}
+                />
+              </div>
+              <p
                 style={{
-                  borderColor: "#e5e7eb",
-                  color: "var(--color-charcoal)",
-                  fontSize: "14px",
-                  fontWeight: "500",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "var(--color-navy)",
+                  marginBottom: "8px",
                 }}
               >
-                Anterior
-              </button>
-              <button
-                className="px-4 py-2 rounded-[8px] border transition-colors hover:bg-[#f5f6f7]"
+                No hay documentos guardados
+              </p>
+              <p
                 style={{
-                  borderColor: "#e5e7eb",
-                  color: "var(--color-charcoal)",
                   fontSize: "14px",
-                  fontWeight: "500",
+                  fontWeight: "400",
+                  color: "#6b7280",
                 }}
               >
-                Siguiente
+                Comienza a crear documentos para verlos aquí
+              </p>
+              <button
+                onClick={() => navigate("CreateDoc_Step1_SelectTemplate")}
+                className="mt-6 px-6 py-3 rounded-[8px] transition-all hover:shadow-md"
+                style={{
+                  backgroundColor: "var(--color-navy)",
+                  color: "var(--color-white)",
+                  fontSize: "15px",
+                  fontWeight: "600",
+                }}
+              >
+                Crear Primer Documento
               </button>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b" style={{ borderColor: "#e5e7eb" }}>
+                      <th
+                        className="px-6 py-4 text-left"
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          color: "var(--color-charcoal)",
+                          backgroundColor: "#f9fafb",
+                        }}
+                      >
+                        Nombre
+                      </th>
+                      <th
+                        className="px-6 py-4 text-left"
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          color: "var(--color-charcoal)",
+                          backgroundColor: "#f9fafb",
+                        }}
+                      >
+                        Tipo
+                      </th>
+                      <th
+                        className="px-6 py-4 text-left"
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          color: "var(--color-charcoal)",
+                          backgroundColor: "#f9fafb",
+                        }}
+                      >
+                        Fecha
+                      </th>
+                      <th
+                        className="px-6 py-4 text-left"
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          color: "var(--color-charcoal)",
+                          backgroundColor: "#f9fafb",
+                        }}
+                      >
+                        Tamaño
+                      </th>
+                      <th
+                        className="px-6 py-4 text-left"
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          color: "var(--color-charcoal)",
+                          backgroundColor: "#f9fafb",
+                        }}
+                      >
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDocuments.map((doc) => (
+                      <tr
+                        key={doc.id}
+                        id={`document_row_${doc.id}`}
+                        className="border-b hover:bg-[#fafbfc] transition-colors"
+                        style={{ borderColor: "#e5e7eb" }}
+                      >
+                        {/* Name Column */}
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-10 h-10 rounded-[8px] flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: "var(--color-navy)" }}
+                            >
+                              <FileText
+                                className="w-5 h-5"
+                                style={{ color: "var(--color-gold)" }}
+                                strokeWidth={2}
+                              />
+                            </div>
+                            <span
+                              style={{
+                                fontSize: "15px",
+                                fontWeight: "500",
+                                color: "var(--color-navy)",
+                              }}
+                            >
+                              {doc.templateName}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Type Column */}
+                        <td className="px-6 py-5">
+                          <span
+                            className="px-3 py-1.5 rounded-full"
+                            style={{
+                              fontSize: "13px",
+                              fontWeight: "500",
+                              color: "var(--color-charcoal)",
+                              backgroundColor: "#f3f4f6",
+                            }}
+                          >
+                            {doc.format.toUpperCase()}
+                          </span>
+                        </td>
+
+                        {/* Date Column */}
+                        <td className="px-6 py-5">
+                          <span
+                            style={{
+                              fontSize: "15px",
+                              fontWeight: "400",
+                              color: "var(--color-charcoal)",
+                            }}
+                          >
+                            {formatDate(doc.createdAt)}
+                          </span>
+                        </td>
+
+                        {/* Size Column */}
+                        <td className="px-6 py-5">
+                          <span
+                            style={{
+                              fontSize: "15px",
+                              fontWeight: "400",
+                              color: "var(--color-charcoal)",
+                            }}
+                          >
+                            {formatFileSize(doc.fileSize)}
+                          </span>
+                        </td>
+
+                        {/* Actions Column */}
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                            <button
+                              id={`btn_view_${doc.id}`}
+                              className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
+                              title="Ver documento"
+                            >
+                              <Eye
+                                className="w-5 h-5"
+                                style={{ color: "var(--color-charcoal)" }}
+                                strokeWidth={2}
+                              />
+                            </button>
+                            <button
+                              id={`btn_download_${doc.id}`}
+                              className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
+                              title="Descargar"
+                            >
+                              <Download
+                                className="w-5 h-5"
+                                style={{ color: "var(--color-charcoal)" }}
+                                strokeWidth={2}
+                              />
+                            </button>
+                            <button
+                              id={`btn_delete_${doc.id}`}
+                              onClick={() => onDeleteDocument(doc.id)}
+                              className="p-2 rounded-[8px] transition-colors hover:bg-red-50"
+                              title="Eliminar documento"
+                            >
+                              <Trash2
+                                className="w-5 h-5"
+                                style={{ color: "#dc2626" }}
+                                strokeWidth={2}
+                              />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer */}
+              <div
+                className="px-6 py-4 border-t flex items-center justify-between"
+                style={{ borderColor: "#e5e7eb" }}
+              >
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: "400",
+                    color: "#6b7280",
+                  }}
+                >
+                  Mostrando {filteredDocuments.length} de {documents.length}{" "}
+                  documentos
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </main>
     </div>

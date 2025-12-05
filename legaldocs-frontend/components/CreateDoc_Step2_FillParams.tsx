@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Scale, ArrowLeft, ArrowRight, Eye } from "lucide-react";
+import { NavigateFunction } from "@/types";
 
 interface CreateDocStep2Props {
-  navigate: (route: string, params?: any) => void;
+  navigate: NavigateFunction;
   template: { id: number; [key: string]: any };
 }
 
@@ -61,7 +62,7 @@ export default function CreateDocStep2({
 
   const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
-    navigate("CreateDoc_Step3_Review", { formData, template });
+    navigate("CreateDoc_Step3_Review", { formData, template: { ...template, name: template.name || "" } });
   };
 
   const handleClauseToggle = (

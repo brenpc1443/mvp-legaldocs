@@ -1,7 +1,24 @@
 import React from "react";
 import { CheckCircle, Download, FolderOpen, X } from "lucide-react";
+import { NavigateFunction } from "@/types";
 
-export default function GeneratedSuccessModal({ navigate, setShowSuccessModal }) {
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+interface GeneratedSuccessModalProps {
+  navigate: NavigateFunction;
+  setShowSuccessModal: (show: boolean) => void;
+  user: User | null;
+}
+
+export default function GeneratedSuccessModal({
+  navigate,
+  setShowSuccessModal,
+  user,
+}: GeneratedSuccessModalProps) {
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-6"
@@ -11,7 +28,8 @@ export default function GeneratedSuccessModal({ navigate, setShowSuccessModal })
       <div
         className="bg-white rounded-[8px] p-10 max-w-md w-full"
         style={{
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+          boxShadow:
+            "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -31,7 +49,11 @@ export default function GeneratedSuccessModal({ navigate, setShowSuccessModal })
             className="w-20 h-20 rounded-full flex items-center justify-center"
             style={{ backgroundColor: "#dcfce7" }}
           >
-            <CheckCircle className="w-12 h-12" style={{ color: "#10b981" }} strokeWidth={2} />
+            <CheckCircle
+              className="w-12 h-12"
+              style={{ color: "#10b981" }}
+              strokeWidth={2}
+            />
           </div>
         </div>
 
@@ -58,13 +80,18 @@ export default function GeneratedSuccessModal({ navigate, setShowSuccessModal })
             lineHeight: "1.6",
           }}
         >
-          Tu documento ha sido generado correctamente y está listo para descargar
+          Tu documento ha sido generado correctamente y está guardado en tu
+          biblioteca personal.
         </p>
 
         {/* Action Buttons */}
         <div className="space-y-4">
           <button
             id="btn_download_pdf"
+            onClick={() => {
+              setShowSuccessModal(false);
+              navigate("Dashboard_Home");
+            }}
             className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-[8px] transition-all hover:shadow-lg"
             style={{
               backgroundColor: "var(--color-navy)",
@@ -74,7 +101,7 @@ export default function GeneratedSuccessModal({ navigate, setShowSuccessModal })
             }}
           >
             <Download className="w-5 h-5" strokeWidth={2} />
-            Descargar PDF
+            Ir al Dashboard
           </button>
 
           <button

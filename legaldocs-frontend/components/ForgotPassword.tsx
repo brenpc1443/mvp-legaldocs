@@ -1,8 +1,9 @@
 import React from "react";
 import { Scale, Mail, ArrowLeft, Check } from "lucide-react";
+import { NavigateFunction } from "@/types";
 
 type ForgotPasswordProps = {
-  navigate: (route: string, params?: any) => void;
+  navigate: NavigateFunction;
 };
 
 export default function ForgotPassword({ navigate }: ForgotPasswordProps) {

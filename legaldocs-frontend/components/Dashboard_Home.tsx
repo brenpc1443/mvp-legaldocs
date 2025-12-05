@@ -15,13 +15,21 @@ import {
   Clock,
   CheckCircle,
   TrendingUp,
+  LogOut,
 } from "lucide-react";
+import { NavigateFunction } from "@/types";
 
-type DashboardHomeProps = {
-  navigate: (route: string, params?: any) => void;
-};
+interface DashboardHomeProps {
+  navigate: NavigateFunction;
+  user: { id: number; name: string; email: string } | null;
+  onLogout: () => void;
+}
 
-export default function DashboardHome({ navigate }: DashboardHomeProps) {
+export default function DashboardHome({
+  navigate,
+  user,
+  onLogout,
+}: DashboardHomeProps) {
   const recentDocuments = [
     {
       id: 1,
@@ -150,11 +158,24 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                 </span>
               </button>
             </li>
+            <li>
+              <button
+                onClick={onLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-[8px] transition-all hover:bg-[rgba(212,165,116,0.1)]"
+                style={{ color: "#9ca3af" }}
+                id="btn_logout"
+              >
+                <LogOut className="w-5 h-5" strokeWidth={2} />
+                <span style={{ fontSize: "15px", fontWeight: "500" }}>
+                  Cerrar sesión
+                </span>
+              </button>
+            </li>
           </ul>
         </nav>
 
         {/* Usage Stats */}
-        <div className="absolute bottom-6 left-3 right-3">
+        <div className="absolute bottom-26 left-3 right-3">
           <div
             className="p-4 rounded-[8px]"
             style={{ backgroundColor: "rgba(212, 165, 116, 0.1)" }}
@@ -177,7 +198,7 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                   color: "var(--color-white)",
                 }}
               >
-                47
+                0
               </span>
               <span
                 style={{
@@ -193,13 +214,15 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: "47%",
+                  width: "0%",
                   backgroundColor: "var(--color-gold)",
                 }}
               />
             </div>
           </div>
         </div>
+
+        {/* Logout Button */}
       </aside>
 
       {/* Main Content */}
@@ -236,7 +259,7 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
             </div>
 
             {/* Right Side */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 ml-6">
               <button
                 id="btn_notifications"
                 className="relative p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
@@ -245,10 +268,6 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                   className="w-5 h-5"
                   style={{ color: "var(--color-charcoal)" }}
                   strokeWidth={2}
-                />
-                <span
-                  className="absolute top-1 right-1 w-2 h-2 rounded-full"
-                  style={{ backgroundColor: "#ef4444" }}
                 />
               </button>
 
@@ -270,7 +289,7 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                       color: "var(--color-navy)",
                     }}
                   >
-                    Dr. Brayan Paredes
+                    {user?.name || "Usuario"}
                   </p>
                   <p
                     style={{
@@ -300,7 +319,7 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
                 letterSpacing: "-0.01em",
               }}
             >
-              Bienvenido, Dr. Mendoza
+              Bienvenido, {user?.name?.split(" ")[0] || "usuario"}
             </h1>
             <p
               style={{
@@ -318,22 +337,22 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
             {[
               {
                 title: "Documentos Totales",
-                value: "47",
-                change: "+12% este mes",
+                value: "0",
+                change: "Comienza a crear",
                 icon: FileText,
                 color: "var(--color-navy)",
               },
               {
                 title: "En Revisión",
-                value: "8",
-                change: "Requieren atención",
+                value: "0",
+                change: "Sin documentos",
                 icon: Clock,
                 color: "var(--color-gold)",
               },
               {
                 title: "Completados",
-                value: "39",
-                change: "+5 esta semana",
+                value: "0",
+                change: "Crea tu primer documento",
                 icon: CheckCircle,
                 color: "#10b981",
               },
@@ -491,96 +510,114 @@ export default function DashboardHome({ navigate }: DashboardHomeProps) {
 
             {/* Documents List */}
             <div className="divide-y" style={{ borderColor: "#e5e7eb" }}>
-              {recentDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="px-6 py-5 hover:bg-[#fafbfc] transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div
-                        className="w-12 h-12 rounded-[8px] flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: "var(--color-navy)" }}
-                      >
-                        <FileText
-                          className="w-6 h-6"
-                          style={{ color: "var(--color-gold)" }}
-                          strokeWidth={2}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h4
-                          className="mb-1"
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: "500",
-                            color: "var(--color-navy)",
-                          }}
+              {recentDocuments.length === 0 ? (
+                <div className="px-6 py-12 text-center">
+                  <p
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: "400",
+                      color: "#6b7280",
+                    }}
+                  >
+                    No hay documentos recientes. ¡Crea tu primer documento!
+                  </p>
+                </div>
+              ) : (
+                recentDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="px-6 py-5 hover:bg-[#fafbfc] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div
+                          className="w-12 h-12 rounded-[8px] flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: "var(--color-navy)" }}
                         >
-                          {doc.name}
-                        </h4>
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="px-2 py-1 rounded-full"
+                          <FileText
+                            className="w-6 h-6"
+                            style={{ color: "var(--color-gold)" }}
+                            strokeWidth={2}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h4
+                            className="mb-1"
                             style={{
-                              fontSize: "12px",
+                              fontSize: "16px",
                               fontWeight: "500",
-                              color: "var(--color-charcoal)",
-                              backgroundColor: "#f3f4f6",
+                              color: "var(--color-navy)",
                             }}
                           >
-                            {doc.type}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "13px",
-                              fontWeight: "400",
-                              color: "#6b7280",
-                            }}
-                          >
-                            {doc.date}
-                          </span>
+                            {doc.name}
+                          </h4>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="px-2 py-1 rounded-full"
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: "500",
+                                color: "var(--color-charcoal)",
+                                backgroundColor: "#f3f4f6",
+                              }}
+                            >
+                              {doc.type}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "13px",
+                                fontWeight: "400",
+                                color: "#6b7280",
+                              }}
+                            >
+                              {doc.date}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="px-3 py-1.5 rounded-full"
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: "500",
-                          color:
-                            doc.status === "Completado" ? "#065f46" : "#92400e",
-                          backgroundColor:
-                            doc.status === "Completado" ? "#dcfce7" : "#fef3c7",
-                        }}
-                      >
-                        {doc.status}
-                      </span>
-                      <button
-                        className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
-                        title="Ver documento"
-                      >
-                        <Eye
-                          className="w-5 h-5"
-                          style={{ color: "var(--color-charcoal)" }}
-                          strokeWidth={2}
-                        />
-                      </button>
-                      <button
-                        className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
-                        title="Descargar"
-                      >
-                        <Download
-                          className="w-5 h-5"
-                          style={{ color: "var(--color-charcoal)" }}
-                          strokeWidth={2}
-                        />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="px-3 py-1.5 rounded-full"
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "500",
+                            color:
+                              doc.status === "Completado"
+                                ? "#065f46"
+                                : "#92400e",
+                            backgroundColor:
+                              doc.status === "Completado"
+                                ? "#dcfce7"
+                                : "#fef3c7",
+                          }}
+                        >
+                          {doc.status}
+                        </span>
+                        <button
+                          className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
+                          title="Ver documento"
+                        >
+                          <Eye
+                            className="w-5 h-5"
+                            style={{ color: "var(--color-charcoal)" }}
+                            strokeWidth={2}
+                          />
+                        </button>
+                        <button
+                          className="p-2 rounded-[8px] transition-colors hover:bg-[#f5f6f7]"
+                          title="Descargar"
+                        >
+                          <Download
+                            className="w-5 h-5"
+                            style={{ color: "var(--color-charcoal)" }}
+                            strokeWidth={2}
+                          />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </main>
