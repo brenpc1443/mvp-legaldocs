@@ -159,7 +159,46 @@ const templates = [
 
 const documentCache = new Map();
 
-function createPdfWithPDFKit(textContent, fileName, documentTitle) {
+function textToHTML(content, documentTitle) {
+  const lines = content.split("\n");
+  let html = "";
+
+  lines.forEach((line) => {
+    let trimmed = line.trim();
+
+    if (!trimmed) {
+      html += "<br>";
+      return;
+    }
+
+    trimmed = trimmed.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+    if (trimmed.match(/^(CONSIDERANDOS|CONSIDERANDO|RECITALES)/i)) {
+      html += `<h2 style="text-align: center; font-weight: bold; margin-top: 20px; margin-bottom: 15px;">${trimmed}</h2>`;
+      return;
+    }
+
+    if (
+      trimmed.match(
+        /^(CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
+      )
+    ) {
+      html += `<h3 style="font-weight: bold; margin-top: 12px; margin-bottom: 10px;">${trimmed}</h3>`;
+      return;
+    }
+
+    if (trimmed.match(/^(\d+\.\d+\.?|[a-z]\))/)) {
+      html += `<p style="margin-left: 40px; line-height: 1.6;">${trimmed}</p>`;
+      return;
+    }
+
+    html += `<p style="text-align: justify; line-height: 1.6;">${trimmed}</p>`;
+  });
+
+  return html;
+}
+
+function createPdfWithPDFKit(textContent, fileName) {
   return new Promise((resolve, reject) => {
     try {
       const filePath = path.join(docsFolder, `${fileName}.pdf`);
@@ -168,33 +207,30 @@ function createPdfWithPDFKit(textContent, fileName, documentTitle) {
 
       const doc = new PDFDocument({
         size: "A4",
-        margin: 40,
+        margin: 50,
       });
 
       const stream = fs.createWriteStream(filePath);
 
       doc.pipe(stream);
 
-      // Título principal
+      // Título
       doc
-        .fontSize(16)
+        .fontSize(20)
         .font("Helvetica-Bold")
-        .text(documentTitle.toUpperCase(), {
-          align: "center",
-          lineGap: 8,
-        });
+        .text("DOCUMENTO LEGAL", { align: "center" });
 
-      doc.moveDown(0.8);
-
-      // Línea divisoria
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
       doc.moveDown(0.5);
+      doc
+        .fontSize(11)
+        .font("Helvetica")
+        .text(new Date().toLocaleDateString("es-PE"), { align: "center" });
 
-      // Contenido del documento
+      doc.moveDown(1);
+
+      // Contenido
       const lines = textContent.split("\n");
-      let currentY = doc.y;
-
-      lines.forEach((line, index) => {
+      lines.forEach((line) => {
         const trimmed = line.trim();
 
         if (!trimmed) {
@@ -202,110 +238,21 @@ function createPdfWithPDFKit(textContent, fileName, documentTitle) {
           return;
         }
 
-        // Detectar secciones especiales
-        const isSectionHeader = trimmed.match(
-          /^(CONSTE|CONSIDERANDOS|CONSIDERANDO|RECITALES|CLÁUSULA)/i
-        );
-        const isClauseNumber = trimmed.match(/^CLÁUSULA\s+(?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i);
-        const isSubsection = trimmed.match(/^[a-z]\)/);
-
-        if (isSectionHeader && !isClauseNumber) {
-          // Sección principal
-          doc.moveDown(0.3);
-          doc
-            .fontSize(13)
-            .font("Helvetica-Bold")
-            .text(trimmed, { align: "center", lineGap: 5 });
-          doc.moveDown(0.4);
-        } else if (isClauseNumber) {
-          // Número de cláusula
-          doc.moveDown(0.4);
-          doc
-            .fontSize(11)
-            .font("Helvetica-Bold")
-            .text(trimmed, { align: "left", lineGap: 4 });
+        if (
+          trimmed.match(
+            /^(CONSIDERANDOS|CONSIDERANDO|RECITALES|CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
+          )
+        ) {
           doc.moveDown(0.2);
-        } else if (isSubsection) {
-          // Subsecciones con viñetas
-          doc
-            .fontSize(10)
-            .font("Helvetica")
-            .text(trimmed, {
-              align: "left",
-              lineGap: 3,
-              indent: 20,
-            });
-          doc.moveDown(0.1);
+          doc.fontSize(12).font("Helvetica-Bold").text(trimmed);
+          doc.moveDown(0.2);
         } else {
-          // Párrafos normales
-          doc
-            .fontSize(10)
-            .font("Helvetica")
-            .text(trimmed, {
-              align: "justify",
-              lineGap: 4,
-              width: 500,
-            });
-          doc.moveDown(0.15);
+          doc.fontSize(10).font("Helvetica").text(trimmed, {
+            align: "justify",
+            lineGap: 3,
+          });
         }
       });
-
-      doc.moveDown(1);
-
-      // Línea divisoria final
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-      doc.moveDown(0.5);
-
-      // Firma
-      doc
-        .fontSize(10)
-        .font("Helvetica")
-        .text("En señal de conformidad, las partes suscriben el presente documento:", {
-          align: "center",
-        });
-
-      doc.moveDown(2);
-
-      // Espacios para firmas
-      const signatureY = doc.y;
-      const signatureWidth = 150;
-      const signatureSpacing = 250;
-
-      // Primera firma
-      doc
-        .moveTo(80, signatureY + 60)
-        .lineTo(80 + signatureWidth, signatureY + 60)
-        .stroke();
-
-      doc
-        .fontSize(9)
-        .font("Helvetica-Bold")
-        .text("_________________________", 50, signatureY + 65, {
-          align: "left",
-        });
-      doc
-        .fontSize(8)
-        .font("Helvetica")
-        .text("FIRMA", 50, signatureY + 75, { align: "left" });
-
-      // Segunda firma
-      doc
-        .moveTo(80 + signatureSpacing, signatureY + 60)
-        .lineTo(80 + signatureSpacing + signatureWidth, signatureY + 60)
-        .stroke();
-
-      doc
-        .fontSize(9)
-        .font("Helvetica-Bold")
-        .text("_________________________", 50 + signatureSpacing, signatureY + 65, {
-          align: "left",
-        });
-      doc
-        .fontSize(8)
-        .font("Helvetica")
-        .text("FIRMA", 50 + signatureSpacing, signatureY + 75, {
-          align: "left",
-        });
 
       doc.end();
 
@@ -328,11 +275,15 @@ function createPdfWithPDFKit(textContent, fileName, documentTitle) {
   });
 }
 
-function createWordDocument(textContent, fileName) {
+function createWordDocument(htmlContent, fileName) {
   try {
     const filePath = path.join(docsFolder, `${fileName}.docx`);
 
-    const wordContent = textContent
+    const wordContent = htmlContent
+      .replace(/<[^>]*>/g, "\n")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
       .replace(/\n\n+/g, "\n\n");
 
     fs.writeFileSync(filePath, wordContent, "utf8");
@@ -524,7 +475,12 @@ CLÁUSULA SÉPTIMA: TERMINACIÓN
 El presente contrato terminará al vencimiento del plazo. Podrá resolverse por incumplimiento grave de cualquiera de las partes.
 
 CLÁUSULA OCTAVA: LEY APLICABLE
-El presente contrato se rige conforme a las leyes de la República del Perú.`,
+El presente contrato se rige conforme a las leyes de la República del Perú.
+
+CLÁUSULA NOVENA: FIRMAS
+En señal de conformidad, se firma en Lima, ${new Date().toLocaleDateString(
+      "es-PE"
+    )}`,
 
     2: `ACUERDO DE CONFIDENCIALIDAD
 
@@ -631,6 +587,13 @@ app.get("/api/templates/:id", (req, res) => {
   res.json(template);
 });
 
+function extractTextFromHTML(htmlContent) {
+  let text = htmlContent.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  text = text.replace(/<[^>]*>/g, "");
+  text = text.replace(/\n\n+/g, "\n\n").trim();
+  return text;
+}
+
 app.post("/api/generate-document", async (req, res) => {
   try {
     const { templateId, formData, format, userId } = req.body;
@@ -647,6 +610,7 @@ app.post("/api/generate-document", async (req, res) => {
     console.log(`👤 Usuario ID: ${userId || "N/A"}`);
 
     const content = await generateDocumentContent(template, formData);
+    const htmlContent = textToHTML(content, template.name);
 
     if (format === "preview") {
       console.log(`✅ Retornando preview (sin guardar)`);
@@ -662,11 +626,11 @@ app.post("/api/generate-document", async (req, res) => {
 
     if (format === "pdf") {
       console.log(`🔄 Generando PDF con PDFKit...`);
-      filePath = await createPdfWithPDFKit(content, fileName, template.name);
+      filePath = await createPdfWithPDFKit(content, fileName);
       fileExtension = "pdf";
     } else {
       console.log(`🔄 Generando DOCX...`);
-      filePath = await createWordDocument(content, fileName);
+      filePath = await createWordDocument(htmlContent, fileName);
       fileExtension = "docx";
     }
 
