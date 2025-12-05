@@ -25,12 +25,8 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-// ✅ SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND
-const frontendPath = path.join(__dirname, "../legaldocs-frontend/dist");
-if (fs.existsSync(frontendPath)) {
-  app.use(express.static(frontendPath));
-  console.log("✅ Frontend estático servido desde:", frontendPath);
-}
+// ✅ SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND (DESPUÉS de las rutas API)
+// Esto se hace al final para no interferir con las rutas /api
 
 // Create documents folder
 const docsFolder = path.join(__dirname, "generated_documents");
@@ -604,6 +600,8 @@ async function createWordDocument(htmlContent, fileName) {
   }
 }
 
+// ========== API ROUTES (DEBEN IR ANTES DE SERVIR ARCHIVOS ESTÁTICOS) ==========
+
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body;
   const users = readUsers();
@@ -776,6 +774,13 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "LegalDocs API running" });
 });
 
+// ========== SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND (AL FINAL) ==========
+const frontendPath = path.join(__dirname, "../legaldocs-frontend/dist");
+if (fs.existsSync(frontendPath)) {
+  app.use(express.static(frontendPath));
+  console.log("✅ Frontend estático servido desde:", frontendPath);
+}
+
 // ✅ SERVIR FRONTEND EN RUTAS NO ENCONTRADAS (SPA FALLBACK)
 app.get("*", (req, res) => {
   const indexPath = path.join(frontendPath, "index.html");
@@ -794,6 +799,7 @@ app.listen(PORT, () => {
     `✅ API Key configurada: ${process.env.GEMINI_API_KEY ? "Sí" : "No"}`
   );
   console.log(`\n📋 Endpoints disponibles:`);
+  console.log(`   POST /api/login`);
   console.log(`   GET  /api/templates`);
   console.log(`   POST /api/generate-document`);
   console.log(`   GET  /api/download/:fileName`);
