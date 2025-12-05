@@ -159,103 +159,211 @@ const templates = [
 
 const documentCache = new Map();
 
+// Reemplaza tu createPdfWithPDFKit por esta versión mejorada
 function createPdfWithPDFKit(textContent, fileName, documentTitle) {
   return new Promise((resolve, reject) => {
     try {
       const filePath = path.join(docsFolder, `${fileName}.pdf`);
+      console.log(`📝 Creando PDF con PDFKit (mejorado): ${filePath}`);
 
-      console.log(`📝 Creando PDF con PDFKit: ${filePath}`);
+      // Config
+      const pageWidth = 595.28; // A4 pt ~ 8.27in * 72
+      const pageHeight = 841.89;
+      const margin = { top: 40, right: 40, bottom: 40, left: 40 };
+      const contentWidth = pageWidth - margin.left - margin.right;
+      const lineHeightFactor = 1.6; // similar a tu CSS
+      const headingSpacing = 12;
+      const paragraphSpacing = 6;
 
       const doc = new PDFDocument({
         size: "A4",
-        margin: 40,
+        margins: {
+          top: margin.top,
+          left: margin.left,
+          right: margin.right,
+          bottom: margin.bottom,
+        },
       });
 
       const stream = fs.createWriteStream(filePath);
-
       doc.pipe(stream);
 
-      // Título principal
-      doc
-        .fontSize(16)
-        .font("Helvetica-Bold")
-        .text(documentTitle.toUpperCase(), {
+      // Registrar fuentes locales si existen (mejor parecido)
+      const fontsDir = path.join(__dirname, "fonts"); // crea folder fonts/ con tus .ttf
+      const interRegular = path.join(fontsDir, "Inter-Regular.ttf");
+      const interBold = path.join(fontsDir, "Inter-Bold.ttf");
+      const helvetica = null;
+
+      if (fs.existsSync(interRegular)) {
+        try {
+          doc.registerFont("Inter", interRegular);
+        } catch (e) {
+          console.warn("No pudo registrar Inter Regular", e.message);
+        }
+      }
+      if (fs.existsSync(interBold)) {
+        try {
+          doc.registerFont("Inter-Bold", interBold);
+        } catch (e) {
+          console.warn("No pudo registrar Inter Bold", e.message);
+        }
+      }
+
+      // Helpers
+      function currentFont(normal = true) {
+        if (fs.existsSync(interRegular) && fs.existsSync(interBold)) {
+          return normal ? "Inter" : "Inter-Bold";
+        } else {
+          return normal ? "Helvetica" : "Helvetica-Bold";
+        }
+      }
+
+      function addHeader(title) {
+        // Header area similar al HTML: centered title + subtitle estilo
+        const titleFont = currentFont(false);
+        doc.font(titleFont).fontSize(20);
+        // Letter spacing emulación aproximada (dibujar texto centrado)
+        doc.fillColor("#1a2332");
+        const titleOptions = {
+          width: contentWidth,
           align: "center",
-          lineGap: 8,
-        });
+          lineGap: 2,
+        };
+        doc.text(title, margin.left, margin.top - 10, titleOptions);
+        doc.moveDown(0.6);
+      }
 
-      doc.moveDown(0.8);
+      let cursorY = margin.top + 20; // cursor inicial después del header
+      addHeader(documentTitle);
+      cursorY = doc.y;
 
-      // Línea divisoria
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-      doc.moveDown(0.5);
+      // Dibuja una linea divisoria similar al HTML
+      doc
+        .moveTo(margin.left, cursorY)
+        .lineTo(pageWidth - margin.right, cursorY)
+        .stroke();
+      cursorY = doc.y + 6;
+      doc.y = cursorY;
 
-      // Contenido del documento
+      // Función para crear nueva página si falta espacio
+      function ensureSpace(needed) {
+        if (doc.y + needed > pageHeight - margin.bottom) {
+          doc.addPage();
+          // repetir header en cada página (opcional)
+          doc.font(currentFont(false)).fontSize(12);
+          doc.y = margin.top;
+        }
+      }
+
+      // Procesar el contenido línea por línea, aplicando estilos parecidos al HTML
       const lines = textContent.split("\n");
-      let currentY = doc.y;
 
-      lines.forEach((line, index) => {
-        const trimmed = line.trim();
+      lines.forEach((rawLine, index) => {
+        let line = rawLine.replace(/\r/g, "").trim();
 
-        if (!trimmed) {
-          doc.moveDown(0.3);
+        // Respeta líneas vacías como separadores
+        if (!line) {
+          doc.moveDown(0.5);
           return;
         }
 
-        // Detectar secciones especiales
-        const isSectionHeader = trimmed.match(
-          /^(CONSTE|CONSIDERANDOS|CONSIDERANDO|RECITALES|CLÁUSULA)/i
+        // **negrita** -> usaremos font bold inline
+        const parts = line.split(/(\*\*.*?\*\*)/g); // separa tokens con **bold**
+        const isSectionHeader = line.match(
+          /^(CONSIDERANDOS|CONSIDERANDO|RECITALES)/i
         );
-        const isClauseNumber = trimmed.match(
+        const isH2 =
+          line.match(/^[A-ZÁÉÍÓÚÑ\s]{6,}$/) &&
+          line.length < 60 &&
+          isSectionHeader;
+        const isClauseTitle = line.match(
+          /^(CLÁUSULA|PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
+        );
+        const isClauseNumber = line.match(
           /^CLÁUSULA\s+(?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMO):/i
         );
-        const isSubsection = trimmed.match(/^[a-z]\)/);
+        const isSubsection = line.match(/^[a-z]\)/);
 
-        if (isSectionHeader && !isClauseNumber) {
-          // Sección principal
-          doc.moveDown(0.3);
-          doc
-            .fontSize(13)
-            .font("Helvetica-Bold")
-            .text(trimmed, { align: "center", lineGap: 5 });
-          doc.moveDown(0.4);
-        } else if (isClauseNumber) {
-          // Número de cláusula
-          doc.moveDown(0.4);
-          doc
-            .fontSize(11)
-            .font("Helvetica-Bold")
-            .text(trimmed, { align: "left", lineGap: 4 });
-          doc.moveDown(0.2);
-        } else if (isSubsection) {
-          // Subsecciones con viñetas
-          doc.fontSize(10).font("Helvetica").text(trimmed, {
-            align: "left",
-            lineGap: 3,
-            indent: 20,
-          });
-          doc.moveDown(0.1);
-        } else {
-          // Párrafos normales
-          doc.fontSize(10).font("Helvetica").text(trimmed, {
-            align: "justify",
-            lineGap: 4,
-            width: 500,
-          });
-          doc.moveDown(0.15);
+        // Sección principal grande (centrada, bold)
+        if (isH2) {
+          ensureSpace(30);
+          doc.font(currentFont(false)).fontSize(14);
+          doc.text(line, { align: "center", width: contentWidth });
+          doc.moveDown(0.6);
+          return;
         }
+
+        // Clause title style (h3)
+        if (isClauseNumber || isClauseTitle) {
+          ensureSpace(28);
+          doc.font(currentFont(false)).fontSize(12);
+          doc.text(line, { align: "left", width: contentWidth });
+          doc.moveDown(0.4);
+          return;
+        }
+
+        // Subsection (a) b)
+        if (isSubsection) {
+          ensureSpace(20);
+          doc.font(currentFont(true)).fontSize(10);
+          // Indent subsections
+          doc.text(line, {
+            align: "left",
+            width: contentWidth - 40,
+            indent: 20,
+            lineGap: 3,
+          });
+          doc.moveDown(0.2);
+          return;
+        }
+
+        // Parrafo normal: justificar, respetando **bold** inline
+        ensureSpace(24);
+        // Para simular inline bold, iteramos partes
+        const normalFont = currentFont(true);
+        const boldFont = currentFont(false);
+
+        // Calculamos línea compuesta usando text(...) secuencialmente con continued: true
+        doc.font(normalFont).fontSize(10);
+
+        parts.forEach((part) => {
+          if (!part) return;
+          const m = part.match(/^\*\*(.*)\*\*$/);
+          if (m) {
+            // bold segment
+            doc.font(boldFont).fontSize(10);
+            doc.text(m[1], { continued: true });
+            doc.font(normalFont).fontSize(10);
+          } else {
+            // normal segment
+            doc.font(normalFont).fontSize(10);
+            doc.text(part, { continued: true });
+          }
+        });
+
+        // terminar la línea y aplicar justificado aproximado
+        doc.text("", {
+          continued: false,
+          align: "justify",
+          width: contentWidth,
+          lineGap: 4,
+        });
+
+        doc.moveDown(0.1);
       });
 
+      // Agregar linea divisoria final y firmas
+      ensureSpace(120);
       doc.moveDown(1);
-
-      // Línea divisoria final
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-      doc.moveDown(0.5);
-
-      // Firma
       doc
+        .moveTo(margin.left, doc.y)
+        .lineTo(pageWidth - margin.right, doc.y)
+        .stroke();
+      doc.moveDown(0.8);
+
+      doc
+        .font(currentFont(true))
         .fontSize(10)
-        .font("Helvetica")
         .text(
           "En señal de conformidad, las partes suscriben el presente documento:",
           {
@@ -265,52 +373,53 @@ function createPdfWithPDFKit(textContent, fileName, documentTitle) {
 
       doc.moveDown(2);
 
-      // Espacios para firmas
       const signatureY = doc.y;
-      const signatureWidth = 150;
-      const signatureSpacing = 250;
+      const signatureWidth = 160;
+      const spacing = 240;
 
       // Primera firma
       doc
-        .moveTo(80, signatureY + 60)
-        .lineTo(80 + signatureWidth, signatureY + 60)
+        .moveTo(margin.left + 40, signatureY + 60)
+        .lineTo(margin.left + 40 + signatureWidth, signatureY + 60)
         .stroke();
-
       doc
+        .font(currentFont(false))
         .fontSize(9)
-        .font("Helvetica-Bold")
-        .text("_________________________", 50, signatureY + 65, {
+        .text("_________________________", margin.left + 10, signatureY + 65, {
+          width: signatureWidth,
           align: "left",
         });
       doc
+        .font(currentFont(true))
         .fontSize(8)
-        .font("Helvetica")
-        .text("FIRMA", 50, signatureY + 75, { align: "left" });
+        .text("FIRMA", margin.left + 10, signatureY + 85, {
+          width: signatureWidth,
+          align: "left",
+        });
 
       // Segunda firma
       doc
-        .moveTo(80 + signatureSpacing, signatureY + 60)
-        .lineTo(80 + signatureSpacing + signatureWidth, signatureY + 60)
+        .moveTo(margin.left + 40 + spacing, signatureY + 60)
+        .lineTo(margin.left + 40 + spacing + signatureWidth, signatureY + 60)
         .stroke();
-
       doc
+        .font(currentFont(false))
         .fontSize(9)
-        .font("Helvetica-Bold")
         .text(
           "_________________________",
-          50 + signatureSpacing,
+          margin.left + 10 + spacing,
           signatureY + 65,
-          {
-            align: "left",
-          }
+          { width: signatureWidth, align: "left" }
         );
       doc
+        .font(currentFont(true))
         .fontSize(8)
-        .font("Helvetica")
-        .text("FIRMA", 50 + signatureSpacing, signatureY + 75, {
+        .text("FIRMA", margin.left + 10 + spacing, signatureY + 85, {
+          width: signatureWidth,
           align: "left",
         });
 
+      // Finalizar documento
       doc.end();
 
       stream.on("finish", () => {
