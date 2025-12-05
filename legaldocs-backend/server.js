@@ -169,11 +169,16 @@ function createPdfWithPDFKit(textContent, fileName, documentTitle) {
       // Config
       const pageWidth = 595.28; // A4 pt ~ 8.27in * 72
       const pageHeight = 841.89;
-      const margin = { top: 40, right: 40, bottom: 40, left: 40 };
+      const margin = {
+        top: 56.693, // 20mm -> 56.693 pt
+        right: 42.519, // 15mm -> 42.519 pt
+        bottom: 56.693, // 20mm -> 56.693 pt
+        left: 42.519,
+      };
       const contentWidth = pageWidth - margin.left - margin.right;
-      const lineHeightFactor = 1.6; // similar a tu CSS
-      const headingSpacing = 12;
-      const paragraphSpacing = 6;
+      const lineHeightFactor = 1.6; // deja 1.6 para line-height similar al CSS
+      const headingSpacing = 14; // espacio antes/después de headings
+      const paragraphSpacing = 8;
 
       const doc = new PDFDocument({
         size: "A4",
