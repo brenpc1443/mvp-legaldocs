@@ -13,6 +13,9 @@ import {
   Clock,
   CheckCircle,
   LogOut,
+  Check,
+  X,
+  Play,
 } from "lucide-react";
 import {
   NavigateFunction,
@@ -33,7 +36,6 @@ export default function DashboardHome({
   onLogout,
   documents = [],
 }: DashboardHomeProps) {
-  // Tomar solo los últimos 3 documentos (más recientes)
   const recentDocuments = documents.slice(-3).reverse();
 
   const formatDate = (dateString: string) => {
@@ -62,6 +64,69 @@ export default function DashboardHome({
 
   const stats = getDocumentStats();
 
+  const pricingPlans = [
+    {
+      name: "Básico",
+      price: "S/. 29",
+      period: "/mes",
+      description: "Perfecto para emprendedores y pequeños negocios",
+      features: [
+        "10 documentos por mes",
+        "Plantillas básicas",
+        "Soporte por email",
+        "Exportar en PDF",
+        "Almacenamiento 1GB",
+      ],
+      notIncluded: [
+        "Exportar en Word",
+        "Soporte prioritario",
+        "API Access",
+      ],
+      highlighted: false,
+      buttonText: "Comenzar",
+    },
+    {
+      name: "Profesional",
+      price: "S/. 79",
+      period: "/mes",
+      description: "Ideal para profesionales y estudios legales",
+      features: [
+        "100 documentos por mes",
+        "Todas las plantillas",
+        "Soporte prioritario 24/7",
+        "Exportar en PDF y Word",
+        "Almacenamiento 10GB",
+        "API Access",
+        "Firma digital",
+        "Plantillas personalizadas",
+      ],
+      notIncluded: [],
+      highlighted: true,
+      buttonText: "Plan Actual",
+    },
+    {
+      name: "Empresarial",
+      price: "S/. 199",
+      period: "/mes",
+      description: "Para empresas con alto volumen de documentos",
+      features: [
+        "Documentos ilimitados",
+        "Todas las plantillas premium",
+        "Soporte dedicado 24/7",
+        "Exportar en todos los formatos",
+        "Almacenamiento ilimitado",
+        "API Access completo",
+        "Firma digital avanzada",
+        "Plantillas a medida",
+        "Integración con sistemas",
+        "Capacitación del equipo",
+      ],
+      notIncluded: [],
+      highlighted: false,
+      buttonText: "Contactar Ventas",
+    },
+  ];
+
   return (
     <div
       className="min-h-screen bg-[#fafbfc]"
@@ -75,7 +140,6 @@ export default function DashboardHome({
           borderColor: "#2a3441",
         }}
       >
-        {/* Logo */}
         <div
           className="flex items-center gap-3 px-6 py-6 border-b"
           style={{ borderColor: "#2a3441" }}
@@ -97,7 +161,6 @@ export default function DashboardHome({
           </span>
         </div>
 
-        {/* Navigation Menu */}
         <nav className="px-3 py-6">
           <ul className="space-y-2">
             <li>
@@ -182,7 +245,6 @@ export default function DashboardHome({
           </ul>
         </nav>
 
-        {/* Usage Stats */}
         <div className="absolute bottom-20 left-3 right-3">
           <div
             className="p-4 rounded-[8px]"
@@ -231,9 +293,7 @@ export default function DashboardHome({
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="ml-64">
-        {/* Top Bar */}
         <header
           className="sticky top-0 z-10 border-b bg-white px-8 py-4"
           style={{
@@ -242,7 +302,6 @@ export default function DashboardHome({
           }}
         >
           <div className="flex items-center justify-between">
-            {/* Search Bar */}
             <div className="flex-1 max-w-xl">
               <div className="relative">
                 <Search
@@ -264,7 +323,6 @@ export default function DashboardHome({
               </div>
             </div>
 
-            {/* Right Side */}
             <div className="flex items-center gap-4 ml-6">
               <button
                 id="btn_notifications"
@@ -312,9 +370,7 @@ export default function DashboardHome({
           </div>
         </header>
 
-        {/* Dashboard Content */}
         <main className="p-8">
-          {/* Welcome Section */}
           <div className="mb-10">
             <h1
               className="mb-2"
@@ -343,16 +399,78 @@ export default function DashboardHome({
             </p>
           </div>
 
+          {/* Video Presentation */}
+          <div
+            className="mb-10 bg-white rounded-[8px] p-8 border"
+            style={{
+              borderColor: "#e5e7eb",
+              boxShadow: "0 1px 3px 0 rgba(26, 35, 50, 0.08)",
+            }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div
+                className="w-12 h-12 rounded-[8px] flex items-center justify-center"
+                style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}
+              >
+                <Play
+                  className="w-6 h-6"
+                  style={{ color: "var(--color-gold)" }}
+                  strokeWidth={2}
+                />
+              </div>
+              <div>
+                <h2
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "600",
+                    color: "var(--color-navy)",
+                  }}
+                >
+                  Descubre LegalDocs Perú
+                </h2>
+                <p
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "400",
+                    color: "#6b7280",
+                  }}
+                >
+                  Aprende cómo generar documentos legales en minutos
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="relative rounded-[8px] overflow-hidden"
+              style={{
+                paddingBottom: "56.25%",
+                backgroundColor: "#000",
+              }}
+            >
+              <iframe
+                src="https://www.youtube.com/embed/QsHIag7l0OI"
+                title="LegalDocs Perú - Presentación del Sistema"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                }}
+              />
+            </div>
+          </div>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             {[
               {
                 title: "Documentos Totales",
                 value: stats.total.toString(),
-                change: `+${Math.max(
-                  1,
-                  Math.floor(stats.total * 0.1)
-                )} este mes`,
+                change: `+${Math.max(1, Math.floor(stats.total * 0.1))} este mes`,
                 icon: FileText,
                 color: "var(--color-navy)",
               },
@@ -427,7 +545,7 @@ export default function DashboardHome({
             })}
           </div>
 
-          {/* Create New Document Card */}
+          {/* Create Document Card */}
           <div
             id="card_create_new_document"
             onClick={() => navigate("CreateDoc_Step1_SelectTemplate")}
@@ -486,7 +604,183 @@ export default function DashboardHome({
             </div>
           </div>
 
-          {/* Recent Documents Section */}
+          {/* Pricing Section */}
+          <div className="mb-10">
+            <div className="text-center mb-10">
+              <h2
+                className="mb-3"
+                style={{
+                  fontSize: "36px",
+                  fontWeight: "700",
+                  color: "var(--color-navy)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Planes y Precios
+              </h2>
+              <p
+                style={{
+                  fontSize: "17px",
+                  fontWeight: "400",
+                  color: "var(--color-charcoal)",
+                  lineHeight: "1.6",
+                }}
+              >
+                Elige el plan perfecto para tus necesidades legales
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {pricingPlans.map((plan, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-[8px] border transition-all hover:shadow-lg"
+                  style={{
+                    borderColor: plan.highlighted ? "var(--color-gold)" : "#e5e7eb",
+                    borderWidth: plan.highlighted ? "2px" : "1px",
+                    boxShadow: plan.highlighted
+                      ? "0 4px 12px 0 rgba(212, 165, 116, 0.2)"
+                      : "0 1px 3px 0 rgba(26, 35, 50, 0.08)",
+                  }}
+                >
+                  {plan.highlighted && (
+                    <div
+                      className="py-2 text-center"
+                      style={{
+                        backgroundColor: "var(--color-gold)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: "700",
+                          color: "var(--color-navy)",
+                          letterSpacing: "0.5px",
+                        }}
+                      >
+                        MÁS POPULAR
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="p-8">
+                    <h3
+                      className="mb-2"
+                      style={{
+                        fontSize: "24px",
+                        fontWeight: "600",
+                        color: "var(--color-navy)",
+                      }}
+                    >
+                      {plan.name}
+                    </h3>
+                    <p
+                      className="mb-6"
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "400",
+                        color: "#6b7280",
+                        minHeight: "40px",
+                      }}
+                    >
+                      {plan.description}
+                    </p>
+
+                    <div className="mb-6">
+                      <span
+                        style={{
+                          fontSize: "48px",
+                          fontWeight: "700",
+                          color: "var(--color-navy)",
+                        }}
+                      >
+                        {plan.price}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "16px",
+                          fontWeight: "400",
+                          color: "#6b7280",
+                        }}
+                      >
+                        {plan.period}
+                      </span>
+                    </div>
+
+                    <button
+                      className="w-full px-6 py-3.5 rounded-[8px] mb-6 transition-all hover:shadow-md"
+                      style={{
+                        backgroundColor: plan.highlighted
+                          ? "var(--color-navy)"
+                          : "white",
+                        color: plan.highlighted
+                          ? "var(--color-white)"
+                          : "var(--color-navy)",
+                        border: plan.highlighted ? "none" : "2px solid #e5e7eb",
+                        fontSize: "16px",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {plan.buttonText}
+                    </button>
+
+                    <div className="space-y-3">
+                      {plan.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-start gap-3">
+                          <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                            style={{ backgroundColor: "#dcfce7" }}
+                          >
+                            <Check
+                              className="w-3 h-3"
+                              style={{ color: "#10b981" }}
+                              strokeWidth={3}
+                            />
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "400",
+                              color: "var(--color-charcoal)",
+                              lineHeight: "1.5",
+                            }}
+                          >
+                            {feature}
+                          </span>
+                        </div>
+                      ))}
+                      {plan.notIncluded.map((feature, idx) => (
+                        <div key={idx} className="flex items-start gap-3">
+                          <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                            style={{ backgroundColor: "#fee2e2" }}
+                          >
+                            <X
+                              className="w-3 h-3"
+                              style={{ color: "#dc2626" }}
+                              strokeWidth={3}
+                            />
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "14px",
+                              fontWeight: "400",
+                              color: "#9ca3af",
+                              lineHeight: "1.5",
+                            }}
+                          >
+                            {feature}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Documents */}
           <div
             className="bg-white rounded-[8px] border"
             style={{
@@ -524,7 +818,6 @@ export default function DashboardHome({
               </div>
             </div>
 
-            {/* Documents List */}
             <div className="divide-y" style={{ borderColor: "#e5e7eb" }}>
               {recentDocuments.length === 0 ? (
                 <div className="px-6 py-12 text-center">
